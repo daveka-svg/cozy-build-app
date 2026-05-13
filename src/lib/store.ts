@@ -278,8 +278,8 @@ export const useStore = create<State>((set, get) => ({
     const a: Application = {
       id: `a${Date.now()}`, shiftId, locumId, status: "Applied", note, createdAt: Date.now(),
     };
-    const shifts = get().shifts.map((s) =>
-      s.id === shiftId && s.status === "Open" ? { ...s, status: "New applicants" } : s,
+    const shifts = get().shifts.map((s): Shift =>
+      s.id === shiftId && s.status === "Open" ? { ...s, status: "New applicants" as ShiftStatus } : s,
     );
     set({ applications: [...get().applications, a], shifts });
   },
