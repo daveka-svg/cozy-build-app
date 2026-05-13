@@ -12,6 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppPracticeIndexRouteImport } from './routes/_app.practice.index'
+import { Route as AppPracticeShiftsRouteImport } from './routes/_app.practice.shifts'
+import { Route as AppPracticePracticesRouteImport } from './routes/_app.practice.practices'
+import { Route as AppPracticePostRouteImport } from './routes/_app.practice.post'
+import { Route as AppPracticeHoursRouteImport } from './routes/_app.practice.hours'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -27,27 +31,79 @@ const AppPracticeIndexRoute = AppPracticeIndexRouteImport.update({
   path: '/practice/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPracticeShiftsRoute = AppPracticeShiftsRouteImport.update({
+  id: '/practice/shifts',
+  path: '/practice/shifts',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPracticePracticesRoute = AppPracticePracticesRouteImport.update({
+  id: '/practice/practices',
+  path: '/practice/practices',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPracticePostRoute = AppPracticePostRouteImport.update({
+  id: '/practice/post',
+  path: '/practice/post',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPracticeHoursRoute = AppPracticeHoursRouteImport.update({
+  id: '/practice/hours',
+  path: '/practice/hours',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/practice/hours': typeof AppPracticeHoursRoute
+  '/practice/post': typeof AppPracticePostRoute
+  '/practice/practices': typeof AppPracticePracticesRoute
+  '/practice/shifts': typeof AppPracticeShiftsRoute
   '/practice/': typeof AppPracticeIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/practice/hours': typeof AppPracticeHoursRoute
+  '/practice/post': typeof AppPracticePostRoute
+  '/practice/practices': typeof AppPracticePracticesRoute
+  '/practice/shifts': typeof AppPracticeShiftsRoute
   '/practice': typeof AppPracticeIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
+  '/_app/practice/hours': typeof AppPracticeHoursRoute
+  '/_app/practice/post': typeof AppPracticePostRoute
+  '/_app/practice/practices': typeof AppPracticePracticesRoute
+  '/_app/practice/shifts': typeof AppPracticeShiftsRoute
   '/_app/practice/': typeof AppPracticeIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/practice/'
+  fullPaths:
+    | '/'
+    | '/practice/hours'
+    | '/practice/post'
+    | '/practice/practices'
+    | '/practice/shifts'
+    | '/practice/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/practice'
-  id: '__root__' | '/' | '/_app' | '/_app/practice/'
+  to:
+    | '/'
+    | '/practice/hours'
+    | '/practice/post'
+    | '/practice/practices'
+    | '/practice/shifts'
+    | '/practice'
+  id:
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/_app/practice/hours'
+    | '/_app/practice/post'
+    | '/_app/practice/practices'
+    | '/_app/practice/shifts'
+    | '/_app/practice/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -78,14 +134,50 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPracticeIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/practice/shifts': {
+      id: '/_app/practice/shifts'
+      path: '/practice/shifts'
+      fullPath: '/practice/shifts'
+      preLoaderRoute: typeof AppPracticeShiftsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/practice/practices': {
+      id: '/_app/practice/practices'
+      path: '/practice/practices'
+      fullPath: '/practice/practices'
+      preLoaderRoute: typeof AppPracticePracticesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/practice/post': {
+      id: '/_app/practice/post'
+      path: '/practice/post'
+      fullPath: '/practice/post'
+      preLoaderRoute: typeof AppPracticePostRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/practice/hours': {
+      id: '/_app/practice/hours'
+      path: '/practice/hours'
+      fullPath: '/practice/hours'
+      preLoaderRoute: typeof AppPracticeHoursRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppPracticeHoursRoute: typeof AppPracticeHoursRoute
+  AppPracticePostRoute: typeof AppPracticePostRoute
+  AppPracticePracticesRoute: typeof AppPracticePracticesRoute
+  AppPracticeShiftsRoute: typeof AppPracticeShiftsRoute
   AppPracticeIndexRoute: typeof AppPracticeIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppPracticeHoursRoute: AppPracticeHoursRoute,
+  AppPracticePostRoute: AppPracticePostRoute,
+  AppPracticePracticesRoute: AppPracticePracticesRoute,
+  AppPracticeShiftsRoute: AppPracticeShiftsRoute,
   AppPracticeIndexRoute: AppPracticeIndexRoute,
 }
 
