@@ -12,10 +12,14 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppPracticeIndexRouteImport } from './routes/_app.practice.index'
+import { Route as AppLocumIndexRouteImport } from './routes/_app.locum.index'
 import { Route as AppPracticeShiftsRouteImport } from './routes/_app.practice.shifts'
 import { Route as AppPracticePracticesRouteImport } from './routes/_app.practice.practices'
 import { Route as AppPracticePostRouteImport } from './routes/_app.practice.post'
 import { Route as AppPracticeHoursRouteImport } from './routes/_app.practice.hours'
+import { Route as AppLocumProfileRouteImport } from './routes/_app.locum.profile'
+import { Route as AppLocumFindRouteImport } from './routes/_app.locum.find'
+import { Route as AppLocumBookingsRouteImport } from './routes/_app.locum.bookings'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -29,6 +33,11 @@ const IndexRoute = IndexRouteImport.update({
 const AppPracticeIndexRoute = AppPracticeIndexRouteImport.update({
   id: '/practice/',
   path: '/practice/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLocumIndexRoute = AppLocumIndexRouteImport.update({
+  id: '/locum/',
+  path: '/locum/',
   getParentRoute: () => AppRoute,
 } as any)
 const AppPracticeShiftsRoute = AppPracticeShiftsRouteImport.update({
@@ -51,58 +60,97 @@ const AppPracticeHoursRoute = AppPracticeHoursRouteImport.update({
   path: '/practice/hours',
   getParentRoute: () => AppRoute,
 } as any)
+const AppLocumProfileRoute = AppLocumProfileRouteImport.update({
+  id: '/locum/profile',
+  path: '/locum/profile',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLocumFindRoute = AppLocumFindRouteImport.update({
+  id: '/locum/find',
+  path: '/locum/find',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLocumBookingsRoute = AppLocumBookingsRouteImport.update({
+  id: '/locum/bookings',
+  path: '/locum/bookings',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/locum/bookings': typeof AppLocumBookingsRoute
+  '/locum/find': typeof AppLocumFindRoute
+  '/locum/profile': typeof AppLocumProfileRoute
   '/practice/hours': typeof AppPracticeHoursRoute
   '/practice/post': typeof AppPracticePostRoute
   '/practice/practices': typeof AppPracticePracticesRoute
   '/practice/shifts': typeof AppPracticeShiftsRoute
+  '/locum/': typeof AppLocumIndexRoute
   '/practice/': typeof AppPracticeIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/locum/bookings': typeof AppLocumBookingsRoute
+  '/locum/find': typeof AppLocumFindRoute
+  '/locum/profile': typeof AppLocumProfileRoute
   '/practice/hours': typeof AppPracticeHoursRoute
   '/practice/post': typeof AppPracticePostRoute
   '/practice/practices': typeof AppPracticePracticesRoute
   '/practice/shifts': typeof AppPracticeShiftsRoute
+  '/locum': typeof AppLocumIndexRoute
   '/practice': typeof AppPracticeIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
+  '/_app/locum/bookings': typeof AppLocumBookingsRoute
+  '/_app/locum/find': typeof AppLocumFindRoute
+  '/_app/locum/profile': typeof AppLocumProfileRoute
   '/_app/practice/hours': typeof AppPracticeHoursRoute
   '/_app/practice/post': typeof AppPracticePostRoute
   '/_app/practice/practices': typeof AppPracticePracticesRoute
   '/_app/practice/shifts': typeof AppPracticeShiftsRoute
+  '/_app/locum/': typeof AppLocumIndexRoute
   '/_app/practice/': typeof AppPracticeIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/locum/bookings'
+    | '/locum/find'
+    | '/locum/profile'
     | '/practice/hours'
     | '/practice/post'
     | '/practice/practices'
     | '/practice/shifts'
+    | '/locum/'
     | '/practice/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/locum/bookings'
+    | '/locum/find'
+    | '/locum/profile'
     | '/practice/hours'
     | '/practice/post'
     | '/practice/practices'
     | '/practice/shifts'
+    | '/locum'
     | '/practice'
   id:
     | '__root__'
     | '/'
     | '/_app'
+    | '/_app/locum/bookings'
+    | '/_app/locum/find'
+    | '/_app/locum/profile'
     | '/_app/practice/hours'
     | '/_app/practice/post'
     | '/_app/practice/practices'
     | '/_app/practice/shifts'
+    | '/_app/locum/'
     | '/_app/practice/'
   fileRoutesById: FileRoutesById
 }
@@ -134,6 +182,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPracticeIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/locum/': {
+      id: '/_app/locum/'
+      path: '/locum'
+      fullPath: '/locum/'
+      preLoaderRoute: typeof AppLocumIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/practice/shifts': {
       id: '/_app/practice/shifts'
       path: '/practice/shifts'
@@ -162,22 +217,51 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPracticeHoursRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/locum/profile': {
+      id: '/_app/locum/profile'
+      path: '/locum/profile'
+      fullPath: '/locum/profile'
+      preLoaderRoute: typeof AppLocumProfileRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/locum/find': {
+      id: '/_app/locum/find'
+      path: '/locum/find'
+      fullPath: '/locum/find'
+      preLoaderRoute: typeof AppLocumFindRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/locum/bookings': {
+      id: '/_app/locum/bookings'
+      path: '/locum/bookings'
+      fullPath: '/locum/bookings'
+      preLoaderRoute: typeof AppLocumBookingsRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppLocumBookingsRoute: typeof AppLocumBookingsRoute
+  AppLocumFindRoute: typeof AppLocumFindRoute
+  AppLocumProfileRoute: typeof AppLocumProfileRoute
   AppPracticeHoursRoute: typeof AppPracticeHoursRoute
   AppPracticePostRoute: typeof AppPracticePostRoute
   AppPracticePracticesRoute: typeof AppPracticePracticesRoute
   AppPracticeShiftsRoute: typeof AppPracticeShiftsRoute
+  AppLocumIndexRoute: typeof AppLocumIndexRoute
   AppPracticeIndexRoute: typeof AppPracticeIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppLocumBookingsRoute: AppLocumBookingsRoute,
+  AppLocumFindRoute: AppLocumFindRoute,
+  AppLocumProfileRoute: AppLocumProfileRoute,
   AppPracticeHoursRoute: AppPracticeHoursRoute,
   AppPracticePostRoute: AppPracticePostRoute,
   AppPracticePracticesRoute: AppPracticePracticesRoute,
   AppPracticeShiftsRoute: AppPracticeShiftsRoute,
+  AppLocumIndexRoute: AppLocumIndexRoute,
   AppPracticeIndexRoute: AppPracticeIndexRoute,
 }
 
