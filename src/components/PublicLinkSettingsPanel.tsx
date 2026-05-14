@@ -1,4 +1,4 @@
-import { Copy, ExternalLink, Plus, Trash2 } from "lucide-react";
+import { Copy, ExternalLink } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -6,12 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import type { Practice, PublicApplicationField, PublicLinkSettings, Role } from "@/lib/store";
+import type { Practice, PublicLinkSettings, Role } from "@/lib/store";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 const roles: Role[] = ["Vet", "Nurse", "Reception"];
-const fieldTypes: PublicApplicationField["type"][] = ["text", "textarea", "url"];
 
 function fallbackSettings(practice: Practice): PublicLinkSettings {
   return {
@@ -57,32 +56,6 @@ export function PublicLinkSettingsPanel({ practice }: { practice: Practice }) {
       ? [...new Set([...current, role])]
       : current.filter((item) => item !== role);
     update({ visibleRoles: next.length ? next : current });
-  };
-
-  const updateField = (id: string, patch: Partial<PublicApplicationField>) => {
-    update({
-      customFields: settings.customFields.map((field) =>
-        field.id === id ? { ...field, ...patch } : field,
-      ),
-    });
-  };
-
-  const addField = () => {
-    update({
-      customFields: [
-        ...settings.customFields,
-        {
-          id: `field-${Date.now()}`,
-          label: "New question",
-          required: false,
-          type: "text",
-        },
-      ],
-    });
-  };
-
-  const removeField = (id: string) => {
-    update({ customFields: settings.customFields.filter((field) => field.id !== id) });
   };
 
   const copyLink = () => {
@@ -193,82 +166,6 @@ export function PublicLinkSettingsPanel({ practice }: { practice: Practice }) {
                   {role}
                 </label>
               ))}
-            </div>
-          </div>
-
-          <div className="rounded-md border p-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-medium">Custom request fields</div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Add questions that appear on the public request form.
-                </p>
-              </div>
-              <Button type="button" size="sm" variant="outline" onClick={addField}>
-                <Plus className="size-4" />
-                Add
-              </Button>
-            </div>
-
-            <div className="mt-3 space-y-3">
-              {settings.customFields.length === 0 ? (
-                <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                  No extra questions yet.
-                </div>
-              ) : (
-                settings.customFields.map((field) => (
-                  <div key={field.id} className="rounded-md border bg-card p-3">
-                    <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_130px_auto]">
-                      <div>
-                        <Label htmlFor={`${practice.id}-${field.id}-label`}>Question</Label>
-                        <Input
-                          id={`${practice.id}-${field.id}-label`}
-                          value={field.label}
-                          onChange={(event) => updateField(field.id, { label: event.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor={`${practice.id}-${field.id}-type`}>Type</Label>
-                        <select
-                          id={`${practice.id}-${field.id}-type`}
-                          value={field.type}
-                          onChange={(event) =>
-                            updateField(field.id, {
-                              type: event.target.value as PublicApplicationField["type"],
-                            })
-                          }
-                          className="mt-1 h-9 w-full rounded-md border bg-background px-3 text-sm"
-                        >
-                          {fieldTypes.map((type) => (
-                            <option key={type} value={type}>
-                              {type}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="self-end"
-                        onClick={() => removeField(field.id)}
-                        aria-label={`Remove ${field.label}`}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </div>
-                    <label className="mt-3 flex items-center gap-2 text-sm">
-                      <Checkbox
-                        checked={field.required}
-                        onCheckedChange={(checked) =>
-                          updateField(field.id, { required: checked === true })
-                        }
-                      />
-                      Required
-                    </label>
-                  </div>
-                ))
-              )}
             </div>
           </div>
         </div>

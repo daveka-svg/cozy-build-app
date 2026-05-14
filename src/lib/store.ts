@@ -28,6 +28,7 @@ export interface Practice {
     postcode: string;
     lat?: number;
     lng?: number;
+    mapUrl?: string;
   }[];
 }
 
@@ -51,6 +52,7 @@ export interface Locum {
   specialisms?: string[];
   preferredLocations?: string[];
   availabilityNote?: string;
+  internalNote?: string;
   profilePhotos?: { url: string; caption: string }[];
   publicProfile?: LocumPublicProfileSettings;
   documents: {
@@ -306,6 +308,7 @@ const seedPractices: Practice[] = [
         postcode: "BS1 4AB",
         lat: 51.4545,
         lng: -2.5879,
+        mapUrl: "https://maps.google.com/?q=12%20Mill%20Lane%20BS1%204AB",
       },
       {
         id: "l2",
@@ -338,6 +341,7 @@ const seedPractices: Practice[] = [
         postcode: "CB2 1JT",
         lat: 52.1981,
         lng: 0.1237,
+        mapUrl: "https://maps.google.com/?q=1%20Oak%20St%20CB2%201JT",
       },
     ],
   },
@@ -695,6 +699,18 @@ const seedApplications: Application[] = [
 
 const seedTimesheets: Timesheet[] = [
   {
+    id: "t2",
+    shiftId: "s6",
+    locumId: "u3",
+    actualStart: "09:10",
+    actualEnd: "17:05",
+    lunchMinutes: 30,
+    notes: "Reception handover completed.",
+    attachmentIds: [],
+    status: "Submitted",
+    submittedAt: Date.now() - 2 * 86400000,
+  },
+  {
     id: "t1",
     shiftId: "s7",
     locumId: "u1",
@@ -817,6 +833,10 @@ interface State {
   updateLocumProfile: (locumId: string, patch: Partial<Locum>) => void;
   addAttachment: (input: Omit<Attachment, "id" | "createdAt">) => Attachment;
   removeAttachment: (id: string) => void;
+  updatePracticeLocation: (
+    practiceId: string,
+    patch: Partial<Practice["locations"][number]>,
+  ) => void;
   updatePracticePublicLink: (practiceId: string, patch: Partial<PublicLinkSettings>) => void;
   updateLocumPublicProfile: (locumId: string, patch: Partial<LocumPublicProfileSettings>) => void;
   addLocumAvailability: (input: Omit<LocumAvailabilityWindow, "id">) => LocumAvailabilityWindow;
@@ -848,6 +868,7 @@ interface State {
   createInvoiceDraft: (timesheetId: string) => void;
   createInvoiceDraftFromTimesheet: (timesheetId: string) => Invoice | undefined;
   issueInvoice: (invoiceId: string) => void;
+  markInvoicePaid: (invoiceId: string) => void;
   connectGoogleCalendarPlaceholder: (ownerType: "practice" | "locum", ownerId: string) => void;
   syncCalendarPlaceholder: (ownerType: "practice" | "locum", ownerId: string) => void;
   markCompleted: (shiftId: string) => void;
@@ -878,6 +899,19 @@ export const useStore = create<State>((set, get) => ({
     return attachment;
   },
   removeAttachment: (id) => set({ attachments: get().attachments.filter((a) => a.id !== id) }),
+  updatePracticeLocation: (practiceId, patch) =>
+    set({
+      practices: get().practices.map((practice) =>
+        practice.id === practiceId
+          ? {
+              ...practice,
+              locations: practice.locations.map((location, index) =>
+                index === 0 ? { ...location, ...patch } : location,
+              ),
+            }
+          : practice,
+      ),
+    }),
   updatePracticePublicLink: (practiceId, patch) =>
     set({
       practices: get().practices.map((p) =>
@@ -1205,6 +1239,12 @@ export const useStore = create<State>((set, get) => ({
     set({
       invoices: get().invoices.map((invoice) =>
         invoice.id === invoiceId ? { ...invoice, status: "Issued", issuedAt: Date.now() } : invoice,
+      ),
+    }),
+  markInvoicePaid: (invoiceId) =>
+    set({
+      invoices: get().invoices.map((invoice) =>
+        invoice.id === invoiceId ? { ...invoice, status: "Paid outside platform" } : invoice,
       ),
     }),
   connectGoogleCalendarPlaceholder: (ownerType, ownerId) =>

@@ -158,9 +158,12 @@ function PublicBookingCalendar() {
     ? practice.locations.find((location) => location.id === highlightedShift.locationId)
     : undefined;
   const primaryLocation = selectedLocation ?? practice.locations[0];
-  const mapQuery = encodeURIComponent(
-    `${primaryLocation.name} ${primaryLocation.address} ${primaryLocation.postcode}`,
-  );
+  const mapQuery = `${primaryLocation.name} ${primaryLocation.address} ${primaryLocation.postcode}`;
+  const pastedMapUrl = primaryLocation.mapUrl?.trim();
+  const mapSrc =
+    pastedMapUrl && (pastedMapUrl.includes("/embed") || pastedMapUrl.includes("output=embed"))
+      ? pastedMapUrl
+      : `https://www.google.com/maps?q=${encodeURIComponent(pastedMapUrl || mapQuery)}&output=embed`;
   const phoneHref = `tel:${practice.whatsapp.replace(/[^+0-9]/g, "")}`;
 
   const submitRequest = () => {
@@ -235,7 +238,7 @@ function PublicBookingCalendar() {
               <div className="overflow-hidden rounded-md border bg-muted/30">
                 <iframe
                   title={`${practice.tradingName} map`}
-                  src={`https://www.google.com/maps?q=${mapQuery}&output=embed`}
+                  src={mapSrc}
                   className="h-36 w-full border-0"
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
