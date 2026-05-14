@@ -1,11 +1,10 @@
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Role, ShiftStatus, AppStatus } from "@/lib/store";
 
 const roleStyle: Record<Role, string> = {
-  Vet: "bg-sky-50 text-sky-800 border-sky-200",
-  Nurse: "bg-emerald-50 text-emerald-800 border-emerald-200",
-  Reception: "bg-amber-50 text-amber-900 border-amber-200",
+  Vet: "bg-pink-50 text-pink-800 border-pink-200",
+  Nurse: "bg-stone-100 text-stone-800 border-stone-300",
+  Reception: "bg-orange-50 text-orange-800 border-orange-200",
 };
 
 const roleLabel: Record<Role, string> = {
@@ -28,15 +27,19 @@ export function RoleChip({ role }: { role: Role }) {
 }
 
 const statusStyle: Record<string, string> = {
-  Open: "bg-sky-50 text-sky-800 border border-sky-200",
-  "New applicants": "bg-primary/15 text-primary border border-primary/30",
+  Open: "bg-blue-50 text-blue-800 border border-blue-200",
+  "New applicants": "bg-amber-50 text-amber-800 border border-amber-200",
   Booked: "bg-emerald-50 text-emerald-800 border border-emerald-200",
-  Completed: "bg-secondary text-secondary-foreground",
-  Cancelled: "bg-destructive/10 text-destructive border border-destructive/30",
-  Applied: "bg-primary/10 text-primary",
+  Completed: "bg-violet-50 text-violet-800 border border-violet-200",
+  Cancelled: "bg-red-50 text-red-700 border border-red-200",
+  Applied: "bg-amber-50 text-amber-800 border border-amber-200",
   "Not selected": "bg-red-50 text-red-700 border border-red-200",
   Declined: "bg-red-50 text-red-700 border border-red-200",
-  Withdrawn: "bg-muted text-muted-foreground",
+  Withdrawn: "bg-stone-100 text-stone-700 border border-stone-200",
+  Sent: "bg-amber-50 text-amber-800 border border-amber-200",
+  Accepted: "bg-emerald-50 text-emerald-800 border border-emerald-200",
+  Issued: "bg-blue-50 text-blue-800 border border-blue-200",
+  Draft: "bg-stone-100 text-stone-700 border border-stone-200",
 };
 
 const statusLabel: Record<string, string> = {
@@ -47,7 +50,7 @@ export function StatusChip({ status }: { status: ShiftStatus | AppStatus | strin
   return (
     <span
       className={cn(
-        "inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium",
+        "inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium border",
         statusStyle[status] ?? "bg-muted",
       )}
     >
