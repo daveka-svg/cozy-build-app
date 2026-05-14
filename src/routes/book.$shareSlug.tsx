@@ -12,16 +12,11 @@ import {
   Send,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import type { FormEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { RoleChip, StatusChip, fmtDate, fmtGBP } from "@/components/Bits";
 import {
   calcShiftValue,
   type Practice,
-  type PublicApplicationField,
   type PublicLinkSettings,
   type Role,
   useStore,
@@ -61,7 +56,7 @@ function fallbackSettings(practice: Practice): PublicLinkSettings {
 
 function PublicBookingCalendar() {
   const { shareSlug } = Route.useParams();
-  const { practices, shifts, applications, requestPublicShift } = useStore();
+  const { practices, shifts, applications, applyAsRegistered, currentLocumId, locums } = useStore();
   const practice = practices.find(
     (item) => item.shareSlug === shareSlug || item.publicLink?.slug === shareSlug,
   );
@@ -87,21 +82,29 @@ function PublicBookingCalendar() {
   const [selectedShiftId, setSelectedShiftId] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
 
-  const publicShifts = useMemo(() => {
+  const visibleFutureShifts = useMemo(() => {
     if (!practice) return [];
     return shifts
       .filter((shift) => {
         if (shift.practiceId !== practice.id) return false;
         if (shift.date < todayIso) return false;
-        if (shift.status !== "Open" && shift.status !== "New applicants") return false;
         if (!visibleRoles.includes(shift.role)) return false;
         if (role !== "All" && shift.role !== role) return false;
         return true;
       })
       .sort((a, b) => `${a.date}${a.start}`.localeCompare(`${b.date}${b.start}`));
   }, [practice, role, shifts, todayIso, visibleRoles]);
+  const publicShifts = visibleFutureShifts.filter(
+    (shift) => shift.status === "Open" || shift.status === "New applicants",
+  );
 
-  const daysWithShifts = new Set(publicShifts.map((shift) => shift.date));
+  const dateStates = new Map<string, "available" | "booked">();
+  visibleFutureShifts.forEach((shift) => {
+    const available = shift.status === "Open" || shift.status === "New applicants";
+    if (available || !dateStates.has(shift.date)) {
+      dateStates.set(shift.date, available ? "available" : "booked");
+    }
+  });
   const selectedDayShifts = publicShifts.filter((shift) => shift.date === selectedDate);
   const highlightedShift =
     selectedDayShifts.find((shift) => shift.id === selectedShiftId) ?? selectedDayShifts[0] ?? null;
@@ -151,44 +154,27 @@ function PublicBookingCalendar() {
     ? practice.locations.find((location) => location.id === highlightedShift.locationId)
     : undefined;
 
-  const submitRequest = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submitRequest = () => {
     if (!highlightedShift) return;
-    const form = new FormData(event.currentTarget);
-    const cvUrl = String(form.get("cvUrl") ?? "").trim();
-    const whatsapp = String(form.get("whatsapp") ?? "").trim();
-    const customAnswers: Record<string, string> = {};
-
-    if (activeSettings.requireCvLink && !cvUrl) {
-      setMessage({ tone: "error", text: "Add a CV or profile link before requesting this shift." });
+    const locum = locums.find((item) => item.id === currentLocumId);
+    if (!locum) {
+      setMessage({ tone: "error", text: "Sign in as a locum before requesting this shift." });
       return;
     }
-
-    for (const field of activeSettings.customFields) {
-      const answer = String(form.get(`custom:${field.id}`) ?? "").trim();
-      if (field.required && !answer) {
-        setMessage({
-          tone: "error",
-          text: `Add ${field.label.toLowerCase()} before requesting this shift.`,
-        });
-        return;
-      }
-      if (answer) customAnswers[field.id] = answer;
+    const alreadyApplied = applications.some(
+      (application) =>
+        application.shiftId === highlightedShift.id && application.locumId === locum.id,
+    );
+    if (alreadyApplied) {
+      setMessage({ tone: "error", text: "You already requested this shift." });
+      return;
     }
-
-    const result = requestPublicShift({
-      practiceSlug: practice.shareSlug,
-      shiftId: highlightedShift.id,
-      displayName: String(form.get("displayName") ?? ""),
-      email: String(form.get("email") ?? ""),
-      whatsapp: whatsapp || "Not provided",
-      role: highlightedShift.role,
-      note: String(form.get("note") ?? ""),
-      cvUrl: cvUrl || undefined,
-      customAnswers: Object.keys(customAnswers).length ? customAnswers : undefined,
-    });
-    setMessage({ tone: result.ok ? "ok" : "error", text: result.message });
-    if (result.ok) event.currentTarget.reset();
+    applyAsRegistered(
+      highlightedShift.id,
+      locum.id,
+      `Requested from ${practice.tradingName} public calendar.`,
+    );
+    setMessage({ tone: "ok", text: "Request sent with your platform profile." });
   };
 
   const copyLink = () => {
@@ -218,7 +204,7 @@ function PublicBookingCalendar() {
             <div>
               <div className="inline-flex items-center gap-2 rounded-md border bg-background px-2.5 py-1 text-xs font-medium text-primary">
                 <CalendarDays className="size-3.5" />
-                Live booking calendar
+                Live
               </div>
               <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
                 {activeSettings.title || `${practice.tradingName} available locum shifts`}
@@ -236,31 +222,36 @@ function PublicBookingCalendar() {
                 </Button>
               )}
             </div>
-            <label className="min-w-40 text-sm font-medium">
-              Role
-              <select
-                value={role}
-                onChange={(event) => {
-                  setRole(event.target.value as Role | "All");
-                  setSelectedShiftId(null);
-                }}
-                className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm"
-              >
-                <option value="All">All roles</option>
-                {visibleRoles.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
+            <div className="min-w-40">
+              <div className="mb-1 text-sm font-medium">Role</div>
+              <div className="flex flex-wrap gap-2">
+                {(["All", ...visibleRoles] as (Role | "All")[]).map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => {
+                      setRole(item);
+                      setSelectedShiftId(null);
+                    }}
+                    className={cn(
+                      "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
+                      role === item
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "bg-background text-muted-foreground hover:bg-accent",
+                    )}
+                  >
+                    {item === "All" ? "All roles" : item === "Reception" ? "VCA" : item}
+                  </button>
                 ))}
-              </select>
-            </label>
+              </div>
+            </div>
           </div>
 
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
             <CalendarPanel
               cursor={cursor}
               selectedDate={selectedDate}
-              datesWithShifts={daysWithShifts}
+              dateStates={dateStates}
               onMonthChange={setCursor}
               onSelectDate={(date) => {
                 setSelectedDate(date);
@@ -316,7 +307,7 @@ function PublicBookingCalendar() {
                         </div>
                         {applicantCount > 0 && (
                           <div className="mt-2 text-xs text-primary">
-                            {applicantCount} request{applicantCount === 1 ? "" : "s"} already sent
+                            {applicantCount} request{applicantCount === 1 ? "" : "s"}
                           </div>
                         )}
                       </button>
@@ -357,7 +348,10 @@ function PublicBookingCalendar() {
                 ) : (
                   <InfoItem label="Rate" value="Shared after request" />
                 )}
-                <InfoItem label="Positions" value={String(highlightedShift.positionsNeeded)} />
+                <InfoItem
+                  label="Lunch break"
+                  value={`${highlightedShift.lunchMinutes} min${highlightedShift.lunchPaid ? " paid" : ""}`}
+                />
               </dl>
 
               <div className="mt-4 rounded-md border bg-background p-3 text-sm">
@@ -370,54 +364,14 @@ function PublicBookingCalendar() {
                 )}
               </div>
 
-              <form className="mt-5 space-y-3" onSubmit={submitRequest}>
-                <div>
-                  <Label htmlFor="displayName">Name</Label>
-                  <Input id="displayName" name="displayName" required placeholder="Your name" />
-                </div>
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    required
-                    placeholder="you@example.com"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="whatsapp">
-                    WhatsApp or phone{activeSettings.requirePhone ? "" : " (optional)"}
-                  </Label>
-                  <Input
-                    id="whatsapp"
-                    name="whatsapp"
-                    required={activeSettings.requirePhone}
-                    placeholder="+44..."
-                  />
-                </div>
-                {activeSettings.requireCvLink && (
-                  <div>
-                    <Label htmlFor="cvUrl">CV or profile link</Label>
-                    <Input id="cvUrl" name="cvUrl" type="url" required placeholder="https://..." />
-                  </div>
-                )}
-                {activeSettings.customFields.map((field) => (
-                  <CustomFieldInput key={field.id} field={field} />
-                ))}
-                <div>
-                  <Label htmlFor="note">Note</Label>
-                  <Textarea
-                    id="note"
-                    name="note"
-                    placeholder="Availability, questions, travel details..."
-                  />
-                </div>
-                <Button className="w-full" type="submit">
-                  <Send className="size-4" />
-                  Request this shift
-                </Button>
-              </form>
+              <div className="mt-5 rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
+                Requests are only available to registered locums. We will send your platform
+                profile, documents, email, and WhatsApp details to the practice.
+              </div>
+              <Button className="mt-3 w-full" type="button" onClick={submitRequest}>
+                <Send className="size-4" />
+                Request with my profile
+              </Button>
             </>
           ) : (
             <div className="py-12 text-center">
@@ -451,13 +405,13 @@ function PublicBookingCalendar() {
 function CalendarPanel({
   cursor,
   selectedDate,
-  datesWithShifts,
+  dateStates,
   onMonthChange,
   onSelectDate,
 }: {
   cursor: Date;
   selectedDate: string;
-  datesWithShifts: Set<string>;
+  dateStates: Map<string, "available" | "booked">;
   onMonthChange: (date: Date) => void;
   onSelectDate: (date: string) => void;
 }) {
@@ -506,7 +460,7 @@ function CalendarPanel({
       <div className="mt-1 grid grid-cols-7 gap-1">
         {cells.map((date, index) => {
           if (!date) return <div key={`blank-${index}`} className="aspect-square" />;
-          const hasShift = datesWithShifts.has(date);
+          const state = dateStates.get(date);
           const selected = selectedDate === date;
           const past = date < today;
           return (
@@ -516,21 +470,23 @@ function CalendarPanel({
               onClick={() => onSelectDate(date)}
               className={cn(
                 "aspect-square rounded-md border p-1.5 text-left text-sm transition-colors",
-                selected
-                  ? "border-primary bg-primary/10"
-                  : "hover:border-primary/50 hover:bg-accent/50",
+                state === "available" && "border-emerald-300 bg-emerald-50 text-emerald-950",
+                state === "booked" && "border-muted bg-muted/50 text-muted-foreground",
+                selected && "ring-2 ring-primary",
+                !state && "hover:border-primary/50 hover:bg-accent/50",
                 past && "cursor-not-allowed opacity-40",
               )}
             >
               <span className="font-medium">{Number(date.slice(-2))}</span>
-              {hasShift && <span className="mt-2 block h-1.5 w-6 rounded-full bg-primary" />}
             </button>
           );
         })}
       </div>
       <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-        <span className="h-1.5 w-6 rounded-full bg-primary" />
-        Available dates update as the practice posts or fills shifts.
+        <span className="size-3 rounded-sm bg-emerald-100 border border-emerald-300" />
+        Available
+        <span className="ml-3 size-3 rounded-sm bg-muted border" />
+        Booked
       </div>
     </section>
   );
@@ -552,24 +508,6 @@ function InfoItem({
         {label}
       </dt>
       <dd className="mt-1 font-medium">{value}</dd>
-    </div>
-  );
-}
-
-function CustomFieldInput({ field }: { field: PublicApplicationField }) {
-  const id = `custom-${field.id}`;
-
-  return (
-    <div>
-      <Label htmlFor={id}>
-        {field.label}
-        {field.required ? "" : " (optional)"}
-      </Label>
-      {field.type === "textarea" ? (
-        <Textarea id={id} name={`custom:${field.id}`} required={field.required} />
-      ) : (
-        <Input id={id} name={`custom:${field.id}`} type={field.type} required={field.required} />
-      )}
     </div>
   );
 }

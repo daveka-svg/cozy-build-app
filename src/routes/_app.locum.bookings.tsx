@@ -571,8 +571,6 @@ function WorkItemCard({
             <RoleChip role={s.role} />
             <StatusChip status={a.status} />
             <StatusChip status={s.status} />
-            {ts && <StatusChip status={`Hours ${ts.status.toLowerCase()}`} />}
-            {inv && <StatusChip status={`Invoice ${inv.status.toLowerCase()}`} />}
           </div>
           <div className="mt-1 text-sm font-medium">{p.tradingName}</div>
           <div className="text-xs text-muted-foreground">
@@ -617,19 +615,27 @@ function WorkItemCard({
                 Email
               </a>
             </Button>
-            <Button size="sm" variant="outline" onClick={() => onDownloadIcs(s.id)}>
-              <CalendarPlus className="size-4" />
-              Add to calendar
-            </Button>
             {s.date >= new Date().toISOString().slice(0, 10) && (
-              <Button size="sm" variant="ghost" onClick={() => onWithdraw(item)}>
-                <Ban className="size-4" />
-                Cancel booking
-              </Button>
+              <>
+                <Button size="sm" variant="outline" onClick={() => onDownloadIcs(s.id)}>
+                  <CalendarPlus className="size-4" />
+                  Add to calendar
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => onWithdraw(item)}>
+                  <Ban className="size-4" />
+                  Cancel booking
+                </Button>
+              </>
             )}
             {isPast && s.status !== "Completed" && (
               <Button size="sm" variant="ghost" onClick={() => onMarkCompleted(s.id)}>
                 Demo: mark completed
+              </Button>
+            )}
+            {isPast && ts?.status === "Approved" && !inv && (
+              <Button size="sm" onClick={() => onCreateDraft(ts.id)}>
+                <FileText className="size-4" />
+                Generate invoice
               </Button>
             )}
           </>
@@ -800,8 +806,8 @@ function MonthPlanner({
               <div className="text-sm font-medium">{Number(date.slice(-2))}</div>
               <div className="mt-2 space-y-1">
                 {booked > 0 && (
-                  <div className="rounded-sm bg-success/15 px-1 py-0.5 text-[10px]">
-                    {booked} booked
+                  <div className="rounded-sm bg-emerald-100 px-1 py-0.5 text-[10px] font-medium text-emerald-800">
+                    booked
                   </div>
                 )}
                 {applied > 0 && (

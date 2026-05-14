@@ -37,7 +37,6 @@ function LocumDashboard() {
     invoices,
     bookingRequests,
     locumAvailability,
-    calendarSyncSettings,
     attachments,
   } = useStore();
   const me = locums.find((locum) => locum.id === currentLocumId);
@@ -146,10 +145,6 @@ function LocumDashboard() {
   const readinessScore = Math.round(
     (readinessItems.filter((item) => item.ready).length / readinessItems.length) * 100,
   );
-  const sync = calendarSyncSettings.find(
-    (setting) => setting.ownerType === "locum" && setting.ownerId === currentLocumId,
-  );
-
   return (
     <div className="mx-auto max-w-6xl p-6">
       <PageHeader
@@ -177,14 +172,10 @@ function LocumDashboard() {
                     <Star className="size-3 text-primary" />
                     {me.rating.toFixed(1)}
                   </span>
-                  <StatusChip status={sync?.status ?? "Calendar not connected"} />
                 </div>
                 <h2 className="mt-2 text-xl font-semibold">
                   {me.publicHeadline ?? `${me.role} locum around ${me.postcodeArea}`}
                 </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {me.availabilityNote ?? "Add an availability note so practices know when to ask."}
-                </p>
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-2 border-t pt-4">
@@ -198,12 +189,6 @@ function LocumDashboard() {
                 <Link to="/locum/bookings">
                   <Calendar className="size-4" />
                   My work
-                </Link>
-              </Button>
-              <Button size="sm" variant="outline" asChild>
-                <Link to="/locum/profile">
-                  <FileText className="size-4" />
-                  Improve profile
                 </Link>
               </Button>
             </div>
@@ -242,31 +227,35 @@ function LocumDashboard() {
           value={workedRows.length}
           detail={monthLabel}
           icon={CalendarClock}
+          link={{ to: "/locum/bookings", label: "Open" }}
         />
         <Stat
           label="Hours worked"
           value={hoursWorked.toFixed(1)}
           detail="Approved or completed"
           icon={Clock}
+          link={{ to: "/locum/bookings", label: "Open" }}
         />
         <Stat
           label="Earned"
           value={money.format(earned)}
           detail="Invoices or approved hours"
           icon={Wallet}
+          link={{ to: "/locum/bookings", label: "Open" }}
         />
         <Stat
           label="Pending"
           value={pendingApplications + inboundRequests}
           detail={`${pendingApplications} apps, ${inboundRequests} requests`}
           icon={FileText}
+          link={{ to: "/locum/bookings", label: "Open" }}
         />
         <Stat
           label="Open shifts"
           value={openShifts}
           detail="Available to browse"
           icon={Search}
-          link={{ to: "/locum/find", label: "Browse" }}
+          link={{ to: "/locum/find", label: "Open" }}
         />
       </div>
 
@@ -370,8 +359,8 @@ function Stat({
   icon: ElementType;
   link?: { to: string; label: string };
 }) {
-  return (
-    <div className="rounded-lg border bg-card p-4">
+  const content = (
+    <>
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Icon className="size-3.5" />
         {label}
@@ -379,16 +368,26 @@ function Stat({
       <div className="mt-1 text-2xl font-semibold">{value}</div>
       <div className="mt-1 text-xs text-muted-foreground">{detail}</div>
       {link && (
-        <Link
-          to={link.to}
-          className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
-        >
+        <span className="mt-2 inline-flex items-center gap-1 text-xs text-primary">
           {link.label}
           <ArrowRight className="size-3" />
-        </Link>
+        </span>
       )}
-    </div>
+    </>
   );
+
+  if (link) {
+    return (
+      <Link
+        to={link.to}
+        className="rounded-lg border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-accent/40"
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return <div className="rounded-lg border bg-card p-4">{content}</div>;
 }
 
 function calcActualHours(start: string, end: string, lunchMinutes: number) {

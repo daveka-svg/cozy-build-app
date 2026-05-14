@@ -13,6 +13,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BookShareSlugRouteImport } from './routes/book.$shareSlug'
+import { Route as AvailabilityLocumSlugRouteImport } from './routes/availability.$locumSlug'
 import { Route as AppPracticeIndexRouteImport } from './routes/_app.practice.index'
 import { Route as AppLocumIndexRouteImport } from './routes/_app.locum.index'
 import { Route as AppPracticeShiftsRouteImport } from './routes/_app.practice.shifts'
@@ -40,6 +41,11 @@ const IndexRoute = IndexRouteImport.update({
 const BookShareSlugRoute = BookShareSlugRouteImport.update({
   id: '/book/$shareSlug',
   path: '/book/$shareSlug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AvailabilityLocumSlugRoute = AvailabilityLocumSlugRouteImport.update({
+  id: '/availability/$locumSlug',
+  path: '/availability/$locumSlug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppPracticeIndexRoute = AppPracticeIndexRouteImport.update({
@@ -91,6 +97,7 @@ const AppLocumBookingsRoute = AppLocumBookingsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/availability/$locumSlug': typeof AvailabilityLocumSlugRoute
   '/book/$shareSlug': typeof BookShareSlugRoute
   '/locum/bookings': typeof AppLocumBookingsRoute
   '/locum/find': typeof AppLocumFindRoute
@@ -105,6 +112,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/availability/$locumSlug': typeof AvailabilityLocumSlugRoute
   '/book/$shareSlug': typeof BookShareSlugRoute
   '/locum/bookings': typeof AppLocumBookingsRoute
   '/locum/find': typeof AppLocumFindRoute
@@ -121,6 +129,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/availability/$locumSlug': typeof AvailabilityLocumSlugRoute
   '/book/$shareSlug': typeof BookShareSlugRoute
   '/_app/locum/bookings': typeof AppLocumBookingsRoute
   '/_app/locum/find': typeof AppLocumFindRoute
@@ -137,6 +146,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/sitemap.xml'
+    | '/availability/$locumSlug'
     | '/book/$shareSlug'
     | '/locum/bookings'
     | '/locum/find'
@@ -151,6 +161,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/sitemap.xml'
+    | '/availability/$locumSlug'
     | '/book/$shareSlug'
     | '/locum/bookings'
     | '/locum/find'
@@ -166,6 +177,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/sitemap.xml'
+    | '/availability/$locumSlug'
     | '/book/$shareSlug'
     | '/_app/locum/bookings'
     | '/_app/locum/find'
@@ -182,6 +194,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  AvailabilityLocumSlugRoute: typeof AvailabilityLocumSlugRoute
   BookShareSlugRoute: typeof BookShareSlugRoute
 }
 
@@ -213,6 +226,13 @@ declare module '@tanstack/react-router' {
       path: '/book/$shareSlug'
       fullPath: '/book/$shareSlug'
       preLoaderRoute: typeof BookShareSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/availability/$locumSlug': {
+      id: '/availability/$locumSlug'
+      path: '/availability/$locumSlug'
+      fullPath: '/availability/$locumSlug'
+      preLoaderRoute: typeof AvailabilityLocumSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/practice/': {
@@ -311,6 +331,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  AvailabilityLocumSlugRoute: AvailabilityLocumSlugRoute,
   BookShareSlugRoute: BookShareSlugRoute,
 }
 export const routeTree = rootRouteImport

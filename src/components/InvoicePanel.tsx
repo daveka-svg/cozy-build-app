@@ -1,6 +1,6 @@
 import { CheckCircle2, FileText, ReceiptText, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { StatusChip, fmtGBP } from "@/components/Bits";
+import { fmtGBP } from "@/components/Bits";
 import type { Invoice, Shift, Timesheet } from "@/lib/store";
 
 function calcTimesheetHours(
@@ -60,7 +60,6 @@ export function InvoicePanel({
           <div className="flex items-center gap-2 font-medium">
             <ReceiptText className="size-4 text-primary" />
             Invoice
-            {invoice ? <StatusChip status={invoice.status} /> : <StatusChip status="Not drafted" />}
           </div>
           <div className="mt-1 text-xs text-muted-foreground">
             Generated from approved worked hours, not the planned shift value.
