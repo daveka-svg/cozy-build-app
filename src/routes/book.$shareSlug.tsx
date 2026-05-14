@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Clock,
   Copy,
+  ExternalLink,
   MapPin,
   PawPrint,
   Send,
@@ -17,7 +18,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RoleChip, StatusChip, fmtDate, fmtGBP } from "@/components/Bits";
-import { calcShiftValue, type Role, useStore } from "@/lib/store";
+import {
+  calcShiftValue,
+  type Practice,
+  type PublicApplicationField,
+  type PublicLinkSettings,
+  type Role,
+  useStore,
+} from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/book/$shareSlug")({
@@ -35,10 +43,30 @@ export const Route = createFileRoute("/book/$shareSlug")({
 
 const roles: Role[] = ["Vet", "Nurse", "Reception"];
 
+function fallbackSettings(practice: Practice): PublicLinkSettings {
+  return {
+    enabled: true,
+    slug: practice.shareSlug,
+    title: `${practice.tradingName} available locum shifts`,
+    intro:
+      "Pick an open date, check the shift details, then request the cover. The practice confirms before anything is booked.",
+    visibleRoles: roles,
+    showRates: true,
+    showPracticeWebsite: true,
+    requirePhone: true,
+    requireCvLink: false,
+    customFields: [],
+  };
+}
+
 function PublicBookingCalendar() {
   const { shareSlug } = Route.useParams();
   const { practices, shifts, applications, requestPublicShift } = useStore();
-  const practice = practices.find((item) => item.shareSlug === shareSlug);
+  const practice = practices.find(
+    (item) => item.shareSlug === shareSlug || item.publicLink?.slug === shareSlug,
+  );
+  const settings = practice ? (practice.publicLink ?? fallbackSettings(practice)) : null;
+  const visibleRoles = settings?.visibleRoles.length ? settings.visibleRoles : roles;
   const todayIso = format(new Date(), "yyyy-MM-dd");
   const firstOpenDate = practice
     ? shifts
@@ -46,6 +74,7 @@ function PublicBookingCalendar() {
           (shift) =>
             shift.practiceId === practice.id &&
             shift.date >= todayIso &&
+            visibleRoles.includes(shift.role) &&
             (shift.status === "Open" || shift.status === "New applicants"),
         )
         .sort((a, b) => `${a.date}${a.start}`.localeCompare(`${b.date}${b.start}`))[0]?.date
@@ -65,11 +94,12 @@ function PublicBookingCalendar() {
         if (shift.practiceId !== practice.id) return false;
         if (shift.date < todayIso) return false;
         if (shift.status !== "Open" && shift.status !== "New applicants") return false;
+        if (!visibleRoles.includes(shift.role)) return false;
         if (role !== "All" && shift.role !== role) return false;
         return true;
       })
       .sort((a, b) => `${a.date}${a.start}`.localeCompare(`${b.date}${b.start}`));
-  }, [practice, role, shifts, todayIso]);
+  }, [practice, role, shifts, todayIso, visibleRoles]);
 
   const daysWithShifts = new Set(publicShifts.map((shift) => shift.date));
   const selectedDayShifts = publicShifts.filter((shift) => shift.date === selectedDate);
@@ -93,6 +123,30 @@ function PublicBookingCalendar() {
     );
   }
 
+  const activeSettings = settings ?? fallbackSettings(practice);
+
+  if (!activeSettings.enabled) {
+    return (
+      <main className="min-h-screen bg-background grid place-items-center px-6">
+        <div className="max-w-md rounded-lg border bg-card p-6 text-center">
+          <PawPrint className="mx-auto size-8 text-primary" />
+          <h1 className="mt-4 text-xl font-semibold">Calendar paused</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            This practice has paused its public booking link. Please contact the practice directly.
+          </p>
+          {activeSettings.showPracticeWebsite && practice.website && (
+            <Button asChild className="mt-5" variant="outline">
+              <a href={practice.website} target="_blank" rel="noreferrer">
+                <ExternalLink className="size-4" />
+                Practice website
+              </a>
+            </Button>
+          )}
+        </div>
+      </main>
+    );
+  }
+
   const selectedLocation = highlightedShift
     ? practice.locations.find((location) => location.id === highlightedShift.locationId)
     : undefined;
@@ -101,21 +155,44 @@ function PublicBookingCalendar() {
     event.preventDefault();
     if (!highlightedShift) return;
     const form = new FormData(event.currentTarget);
+    const cvUrl = String(form.get("cvUrl") ?? "").trim();
+    const whatsapp = String(form.get("whatsapp") ?? "").trim();
+    const customAnswers: Record<string, string> = {};
+
+    if (activeSettings.requireCvLink && !cvUrl) {
+      setMessage({ tone: "error", text: "Add a CV or profile link before requesting this shift." });
+      return;
+    }
+
+    for (const field of activeSettings.customFields) {
+      const answer = String(form.get(`custom:${field.id}`) ?? "").trim();
+      if (field.required && !answer) {
+        setMessage({
+          tone: "error",
+          text: `Add ${field.label.toLowerCase()} before requesting this shift.`,
+        });
+        return;
+      }
+      if (answer) customAnswers[field.id] = answer;
+    }
+
     const result = requestPublicShift({
       practiceSlug: practice.shareSlug,
       shiftId: highlightedShift.id,
       displayName: String(form.get("displayName") ?? ""),
       email: String(form.get("email") ?? ""),
-      whatsapp: String(form.get("whatsapp") ?? ""),
+      whatsapp: whatsapp || "Not provided",
       role: highlightedShift.role,
       note: String(form.get("note") ?? ""),
+      cvUrl: cvUrl || undefined,
+      customAnswers: Object.keys(customAnswers).length ? customAnswers : undefined,
     });
     setMessage({ tone: result.ok ? "ok" : "error", text: result.message });
     if (result.ok) event.currentTarget.reset();
   };
 
   const copyLink = () => {
-    const href = `${window.location.origin}/book/${practice.shareSlug}`;
+    const href = `${window.location.origin}/book/${activeSettings.slug || practice.shareSlug}`;
     void navigator.clipboard.writeText(href);
     setMessage({ tone: "ok", text: "Share link copied." });
   };
@@ -144,12 +221,20 @@ function PublicBookingCalendar() {
                 Live booking calendar
               </div>
               <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
-                {practice.tradingName} available locum shifts
+                {activeSettings.title || `${practice.tradingName} available locum shifts`}
               </h1>
               <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                Pick an open date, check the shift details, then request the cover. The practice
-                confirms before anything is booked.
+                {activeSettings.intro ||
+                  "Pick an open date, check the shift details, then request the cover. The practice confirms before anything is booked."}
               </p>
+              {activeSettings.showPracticeWebsite && practice.website && (
+                <Button asChild className="mt-3" size="sm" variant="outline">
+                  <a href={practice.website} target="_blank" rel="noreferrer">
+                    <ExternalLink className="size-4" />
+                    Practice website
+                  </a>
+                </Button>
+              )}
             </div>
             <label className="min-w-40 text-sm font-medium">
               Role
@@ -162,7 +247,7 @@ function PublicBookingCalendar() {
                 className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm"
               >
                 <option value="All">All roles</option>
-                {roles.map((item) => (
+                {visibleRoles.map((item) => (
                   <option key={item} value={item}>
                     {item}
                   </option>
@@ -216,7 +301,11 @@ function PublicBookingCalendar() {
                       >
                         <div className="flex items-center justify-between gap-2">
                           <RoleChip role={shift.role} />
-                          <span className="text-xs font-medium">{fmtGBP(shift.hourlyRate)}/hr</span>
+                          <span className="text-xs font-medium">
+                            {activeSettings.showRates
+                              ? `${fmtGBP(shift.hourlyRate)}/hr`
+                              : "Rate on request"}
+                          </span>
                         </div>
                         <div className="mt-2 text-sm font-medium">
                           {shift.start}-{shift.end}
@@ -257,11 +346,17 @@ function PublicBookingCalendar() {
                   value={`${highlightedShift.start}-${highlightedShift.end}`}
                   icon={Clock}
                 />
-                <InfoItem label="Rate" value={`${fmtGBP(highlightedShift.hourlyRate)}/hr`} />
-                <InfoItem
-                  label="Estimated total"
-                  value={fmtGBP(calcShiftValue(highlightedShift))}
-                />
+                {activeSettings.showRates ? (
+                  <>
+                    <InfoItem label="Rate" value={`${fmtGBP(highlightedShift.hourlyRate)}/hr`} />
+                    <InfoItem
+                      label="Estimated total"
+                      value={fmtGBP(calcShiftValue(highlightedShift))}
+                    />
+                  </>
+                ) : (
+                  <InfoItem label="Rate" value="Shared after request" />
+                )}
                 <InfoItem label="Positions" value={String(highlightedShift.positionsNeeded)} />
               </dl>
 
@@ -291,15 +386,31 @@ function PublicBookingCalendar() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="whatsapp">WhatsApp or phone</Label>
-                  <Input id="whatsapp" name="whatsapp" required placeholder="+44..." />
+                  <Label htmlFor="whatsapp">
+                    WhatsApp or phone{activeSettings.requirePhone ? "" : " (optional)"}
+                  </Label>
+                  <Input
+                    id="whatsapp"
+                    name="whatsapp"
+                    required={activeSettings.requirePhone}
+                    placeholder="+44..."
+                  />
                 </div>
+                {activeSettings.requireCvLink && (
+                  <div>
+                    <Label htmlFor="cvUrl">CV or profile link</Label>
+                    <Input id="cvUrl" name="cvUrl" type="url" required placeholder="https://..." />
+                  </div>
+                )}
+                {activeSettings.customFields.map((field) => (
+                  <CustomFieldInput key={field.id} field={field} />
+                ))}
                 <div>
                   <Label htmlFor="note">Note</Label>
                   <Textarea
                     id="note"
                     name="note"
-                    placeholder="CV link, availability, questions..."
+                    placeholder="Availability, questions, travel details..."
                   />
                 </div>
                 <Button className="w-full" type="submit">
@@ -441,6 +552,24 @@ function InfoItem({
         {label}
       </dt>
       <dd className="mt-1 font-medium">{value}</dd>
+    </div>
+  );
+}
+
+function CustomFieldInput({ field }: { field: PublicApplicationField }) {
+  const id = `custom-${field.id}`;
+
+  return (
+    <div>
+      <Label htmlFor={id}>
+        {field.label}
+        {field.required ? "" : " (optional)"}
+      </Label>
+      {field.type === "textarea" ? (
+        <Textarea id={id} name={`custom:${field.id}`} required={field.required} />
+      ) : (
+        <Input id={id} name={`custom:${field.id}`} type={field.type} required={field.required} />
+      )}
     </div>
   );
 }

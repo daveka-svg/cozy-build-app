@@ -10,17 +10,27 @@ export interface Practice {
   tradingName: string;
   legalName: string;
   shareSlug: string;
+  publicLink?: PublicLinkSettings;
   website: string;
   email: string;
   whatsapp: string;
   profileUrl?: string;
-  locations: { id: string; name: string; address: string; postcode: string }[];
+  locations: {
+    id: string;
+    name: string;
+    address: string;
+    postcode: string;
+    lat?: number;
+    lng?: number;
+  }[];
 }
 
 export interface Locum {
   id: string;
   displayName: string;
   legalName: string;
+  photoUrl?: string;
+  publicHeadline?: string;
   role: Role;
   postcodeArea: string;
   rating: number;
@@ -32,7 +42,20 @@ export interface Locum {
   bio: string;
   experienceYears: number;
   hourlyRate: number;
-  documents: { name: string; status: "supplied" | "missing" }[];
+  specialisms?: string[];
+  preferredLocations?: string[];
+  availabilityNote?: string;
+  profilePhotos?: { url: string; caption: string }[];
+  publicProfile?: LocumPublicProfileSettings;
+  documents: {
+    name: string;
+    status: "supplied" | "missing" | "expiring" | "verified";
+    kind?: AttachmentKind;
+    required?: boolean;
+    expiry?: string;
+    fileName?: string;
+    visibility?: "private" | "practice" | "public";
+  }[];
 }
 
 export interface Shift {
@@ -58,8 +81,14 @@ export interface Application {
   shiftId: string;
   locumId: string;
   status: AppStatus;
+  applicantKind?: ApplicantKind;
+  guestApplicantId?: string;
   note?: string;
+  internalNote?: string;
+  customAnswers?: Record<string, string>;
+  attachmentIds?: string[];
   createdAt: number;
+  updatedAt?: number;
 }
 
 export interface Timesheet {
@@ -70,6 +99,10 @@ export interface Timesheet {
   actualEnd: string;
   lunchMinutes: number;
   expense?: string;
+  notes?: string;
+  attachmentIds?: string[];
+  submittedAt?: number;
+  approvedAt?: number;
   status: "Submitted" | "Approved" | "Queried";
 }
 
@@ -83,9 +116,136 @@ export interface Invoice {
   rate: number;
   total: number;
   status: "Draft" | "Issued" | "Paid outside platform";
+  timesheetId?: string;
+  issuedAt?: number;
+  pdfAttachmentId?: string;
 }
 
 export type ViewerRole = "practice" | "locum";
+export type AttachmentOwnerType =
+  | "practice"
+  | "locum"
+  | "shift"
+  | "application"
+  | "booking"
+  | "timesheet"
+  | "invoice";
+export type AttachmentKind =
+  | "CV"
+  | "Insurance"
+  | "Right to work"
+  | "RCVS"
+  | "Photo"
+  | "Shift brief"
+  | "Timesheet evidence"
+  | "Invoice PDF"
+  | "Other";
+export type ApplicantKind = "registered" | "guest";
+
+export interface Attachment {
+  id: string;
+  ownerType: AttachmentOwnerType;
+  ownerId: string;
+  name: string;
+  kind: AttachmentKind;
+  url?: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  uploadedByRole: ViewerRole | "guest";
+  uploadedById?: string;
+  createdAt: number;
+}
+
+export interface PublicApplicationField {
+  id: string;
+  label: string;
+  required: boolean;
+  type: "text" | "textarea" | "url";
+}
+
+export interface PublicLinkSettings {
+  enabled: boolean;
+  slug: string;
+  title?: string;
+  intro?: string;
+  visibleRoles: Role[];
+  showRates: boolean;
+  showPracticeWebsite: boolean;
+  requirePhone: boolean;
+  requireCvLink: boolean;
+  customFields: PublicApplicationField[];
+}
+
+export interface LocumPublicProfileSettings {
+  enabled: boolean;
+  slug: string;
+  headline?: string;
+  showRate: boolean;
+  showDocuments: boolean;
+  showAvailability: boolean;
+}
+
+export interface LocumAvailabilityWindow {
+  id: string;
+  locumId: string;
+  date: string;
+  start: string;
+  end: string;
+  note?: string;
+  status?: "Available" | "Unavailable" | "Tentative";
+  publicVisible: boolean;
+}
+
+export interface GuestApplicant {
+  id: string;
+  displayName: string;
+  email: string;
+  whatsapp: string;
+  role: Role;
+  cvUrl?: string;
+  createdAt: number;
+}
+
+export interface BookingRequest {
+  id: string;
+  practiceId: string;
+  locumId: string;
+  shiftId?: string;
+  role: Role;
+  date: string;
+  start: string;
+  end: string;
+  hourlyRate: number;
+  locationId: string;
+  message?: string;
+  status: "Sent" | "Accepted" | "Declined" | "Expired" | "Cancelled";
+  createdAt: number;
+  respondedAt?: number;
+  declineReason?: string;
+  cancelReason?: string;
+}
+
+export interface Cancellation {
+  id: string;
+  ownerType: "shift" | "application" | "bookingRequest";
+  ownerId: string;
+  reason: string;
+  note?: string;
+  cancelledByRole: ViewerRole;
+  cancelledById: string;
+  createdAt: number;
+}
+
+export interface CalendarSyncSettings {
+  id: string;
+  ownerType: "practice" | "locum";
+  ownerId: string;
+  provider: "google";
+  status: "Not connected" | "Connected" | "Error";
+  calendarName?: string;
+  lastSyncedAt?: number;
+  placeholderOnly: boolean;
+}
 
 export interface PublicShiftRequest {
   shiftId: string;
@@ -95,10 +255,27 @@ export interface PublicShiftRequest {
   whatsapp: string;
   role: Role;
   note?: string;
+  cvUrl?: string;
+  customAnswers?: Record<string, string>;
 }
 
 const today = new Date();
 const iso = (d: Date) => format(d, "yyyy-MM-dd");
+const publicPracticeLink = (slug: string, title: string, intro: string): PublicLinkSettings => ({
+  enabled: true,
+  slug,
+  title,
+  intro,
+  visibleRoles: ["Vet", "Nurse", "Reception"],
+  showRates: true,
+  showPracticeWebsite: true,
+  requirePhone: true,
+  requireCvLink: false,
+  customFields: [
+    { id: "experience", label: "Relevant experience", required: false, type: "textarea" },
+    { id: "cv", label: "CV or profile link", required: false, type: "url" },
+  ],
+});
 
 const seedPractices: Practice[] = [
   {
@@ -106,13 +283,32 @@ const seedPractices: Practice[] = [
     tradingName: "Riverside Vets",
     legalName: "Riverside Veterinary Ltd",
     shareSlug: "riverside-vets",
+    publicLink: publicPracticeLink(
+      "riverside-vets",
+      "Riverside Vets locum shifts",
+      "See open cover dates for our Bristol clinics and request a shift for practice review.",
+    ),
     website: "https://riversidevets.example.com",
     email: "manager@riversidevets.example.com",
     whatsapp: "+447700900111",
     profileUrl: "https://riversidevets.example.com/about",
     locations: [
-      { id: "l1", name: "Riverside Main", address: "12 Mill Lane", postcode: "BS1 4AB" },
-      { id: "l2", name: "Riverside North", address: "44 Park Rd", postcode: "BS7 9PP" },
+      {
+        id: "l1",
+        name: "Riverside Main",
+        address: "12 Mill Lane",
+        postcode: "BS1 4AB",
+        lat: 51.4545,
+        lng: -2.5879,
+      },
+      {
+        id: "l2",
+        name: "Riverside North",
+        address: "44 Park Rd",
+        postcode: "BS7 9PP",
+        lat: 51.4781,
+        lng: -2.5924,
+      },
     ],
   },
   {
@@ -120,10 +316,24 @@ const seedPractices: Practice[] = [
     tradingName: "Oakfield Animal Hospital",
     legalName: "Oakfield Vets Ltd",
     shareSlug: "oakfield-animal-hospital",
+    publicLink: publicPracticeLink(
+      "oakfield-animal-hospital",
+      "Oakfield Animal Hospital cover calendar",
+      "Browse open reception, nurse, and vet cover dates, then send your details to our team.",
+    ),
     website: "https://oakfield.example.com",
     email: "ops@oakfield.example.com",
     whatsapp: "+447700900222",
-    locations: [{ id: "l3", name: "Oakfield HQ", address: "1 Oak St", postcode: "CB2 1JT" }],
+    locations: [
+      {
+        id: "l3",
+        name: "Oakfield HQ",
+        address: "1 Oak St",
+        postcode: "CB2 1JT",
+        lat: 52.1981,
+        lng: 0.1237,
+      },
+    ],
   },
 ];
 
@@ -132,6 +342,10 @@ const seedLocums: Locum[] = [
     id: "u1",
     displayName: "Dr. Aisha Khan",
     legalName: "Aisha Khan",
+    photoUrl:
+      "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=320&q=80",
+    publicHeadline:
+      "Small animal vet for calm consults, surgery cover, and busy first-opinion days.",
     role: "Vet",
     postcodeArea: "BS5",
     rating: 4.9,
@@ -143,16 +357,72 @@ const seedLocums: Locum[] = [
     bio: "Small animal vet with surgery experience. Calm under pressure.",
     experienceYears: 7,
     hourlyRate: 65,
+    specialisms: ["Small animals", "Dental surgery", "Consults", "No sole charge preferred"],
+    preferredLocations: ["Bristol", "Bath", "North Somerset"],
+    availabilityNote:
+      "Usually available Tue-Thu with two weeks notice. Same-week cover possible for consult-only days.",
+    publicProfile: {
+      enabled: true,
+      slug: "aisha-khan-vet",
+      headline: "Reliable Bristol small animal vet cover",
+      showRate: true,
+      showDocuments: true,
+      showAvailability: true,
+    },
+    profilePhotos: [
+      {
+        url: "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&w=640&q=80",
+        caption: "Small animal consults",
+      },
+      {
+        url: "https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?auto=format&fit=crop&w=640&q=80",
+        caption: "Surgery and inpatient care",
+      },
+    ],
     documents: [
-      { name: "Professional cover", status: "supplied" },
-      { name: "Insurance", status: "supplied" },
-      { name: "Right to work", status: "supplied" },
+      {
+        name: "CV",
+        status: "verified",
+        kind: "CV",
+        required: true,
+        fileName: "aisha-khan-cv.pdf",
+        visibility: "practice",
+      },
+      {
+        name: "Professional cover",
+        status: "verified",
+        kind: "Insurance",
+        required: true,
+        expiry: "2026-12-31",
+        fileName: "professional-cover.pdf",
+        visibility: "practice",
+      },
+      {
+        name: "Right to work",
+        status: "verified",
+        kind: "Right to work",
+        required: true,
+        fileName: "right-to-work.pdf",
+        visibility: "private",
+      },
+      {
+        name: "RCVS certificate",
+        status: "verified",
+        kind: "RCVS",
+        required: true,
+        expiry: "2027-03-31",
+        fileName: "rcvs-certificate.pdf",
+        visibility: "practice",
+      },
     ],
   },
   {
     id: "u2",
     displayName: "Tom Reilly",
     legalName: "Thomas Reilly",
+    photoUrl:
+      "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=320&q=80",
+    publicHeadline: "RVN cover for nurse clinics, anaesthesia support, and inpatient days.",
     role: "Nurse",
     postcodeArea: "BS3",
     rating: 4.7,
@@ -164,15 +434,56 @@ const seedLocums: Locum[] = [
     bio: "RVN, strong in nurse clinics and consults.",
     experienceYears: 4,
     hourlyRate: 28,
+    specialisms: ["Nurse clinics", "Anaesthesia", "Inpatient care"],
+    preferredLocations: ["Bristol", "Gloucestershire"],
+    availabilityNote: "Available Mondays and Fridays for regular cover.",
+    publicProfile: {
+      enabled: true,
+      slug: "tom-reilly-rvn",
+      headline: "RVN locum cover for clinics and theatre support",
+      showRate: true,
+      showDocuments: true,
+      showAvailability: true,
+    },
+    profilePhotos: [
+      {
+        url: "https://images.unsplash.com/photo-1576201836106-db1758fd1c97?auto=format&fit=crop&w=640&q=80",
+        caption: "Nurse clinics",
+      },
+    ],
     documents: [
-      { name: "Insurance", status: "supplied" },
-      { name: "Reference", status: "supplied" },
+      {
+        name: "CV",
+        status: "verified",
+        kind: "CV",
+        required: true,
+        fileName: "tom-reilly-cv.pdf",
+        visibility: "practice",
+      },
+      {
+        name: "Insurance",
+        status: "verified",
+        kind: "Insurance",
+        required: true,
+        expiry: "2026-10-15",
+        visibility: "practice",
+      },
+      {
+        name: "Reference",
+        status: "supplied",
+        kind: "Other",
+        required: false,
+        visibility: "practice",
+      },
     ],
   },
   {
     id: "u3",
     displayName: "Maya Patel",
     legalName: "Maya Patel",
+    photoUrl:
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=320&q=80",
+    publicHeadline: "Reception cover for busy front desks, payments, phones, and client handover.",
     role: "Reception",
     postcodeArea: "BS1",
     rating: 4.8,
@@ -183,7 +494,40 @@ const seedLocums: Locum[] = [
     bio: "Friendly front desk. Phones, payments, busy waiting rooms.",
     experienceYears: 6,
     hourlyRate: 16,
-    documents: [{ name: "Right to work", status: "supplied" }],
+    specialisms: ["Front desk", "Phones", "Payments", "Client care"],
+    preferredLocations: ["Bristol", "Cambridge"],
+    availabilityNote: "Available for half days and school-hour reception cover.",
+    publicProfile: {
+      enabled: true,
+      slug: "maya-patel-reception",
+      headline: "Experienced veterinary reception cover",
+      showRate: true,
+      showDocuments: false,
+      showAvailability: true,
+    },
+    profilePhotos: [
+      {
+        url: "https://images.unsplash.com/photo-1601758124510-52d02ddb7cbd?auto=format&fit=crop&w=640&q=80",
+        caption: "Client care",
+      },
+    ],
+    documents: [
+      {
+        name: "CV",
+        status: "verified",
+        kind: "CV",
+        required: true,
+        fileName: "maya-patel-cv.pdf",
+        visibility: "practice",
+      },
+      {
+        name: "Right to work",
+        status: "verified",
+        kind: "Right to work",
+        required: true,
+        visibility: "private",
+      },
+    ],
   },
 ];
 
@@ -290,6 +634,23 @@ const seedShifts: Shift[] = [
     status: "Completed",
     createdAt: Date.now() - 14 * 86400000,
   },
+  {
+    id: "s7",
+    practiceId: "p1",
+    locationId: "l1",
+    role: "Vet",
+    date: iso(addDays(today, -5)),
+    start: "09:00",
+    end: "18:00",
+    lunchMinutes: 30,
+    lunchPaid: false,
+    hourlyRate: 65,
+    positionsNeeded: 1,
+    area: "Small animals",
+    notes: "Completed consults and routine surgery day.",
+    status: "Completed",
+    createdAt: Date.now() - 20 * 86400000,
+  },
 ];
 
 const seedApplications: Application[] = [
@@ -316,6 +677,118 @@ const seedApplications: Application[] = [
     status: "Booked",
     createdAt: Date.now() - 13 * 86400000,
   },
+  {
+    id: "a5",
+    shiftId: "s7",
+    locumId: "u1",
+    status: "Booked",
+    applicantKind: "registered",
+    createdAt: Date.now() - 18 * 86400000,
+  },
+];
+
+const seedTimesheets: Timesheet[] = [
+  {
+    id: "t1",
+    shiftId: "s7",
+    locumId: "u1",
+    actualStart: "09:00",
+    actualEnd: "18:00",
+    lunchMinutes: 30,
+    expense: "Parking GBP 8",
+    notes: "All consult notes completed before leaving.",
+    attachmentIds: ["att-timesheet-1"],
+    status: "Approved",
+    submittedAt: Date.now() - 4 * 86400000,
+    approvedAt: Date.now() - 3 * 86400000,
+  },
+];
+
+const seedInvoices: Invoice[] = [
+  {
+    id: "i1",
+    number: "INV-1001",
+    shiftId: "s7",
+    locumId: "u1",
+    practiceId: "p1",
+    hours: 8.5,
+    rate: 65,
+    total: 552.5,
+    status: "Paid outside platform",
+    timesheetId: "t1",
+    issuedAt: Date.now() - 2 * 86400000,
+  },
+];
+
+const seedAttachments: Attachment[] = [
+  {
+    id: "att-cv-u1",
+    ownerType: "locum",
+    ownerId: "u1",
+    name: "Aisha Khan CV",
+    kind: "CV",
+    url: "https://example.com/aisha-khan-cv.pdf",
+    uploadedByRole: "locum",
+    uploadedById: "u1",
+    createdAt: Date.now() - 60 * 86400000,
+  },
+  {
+    id: "att-timesheet-1",
+    ownerType: "timesheet",
+    ownerId: "t1",
+    name: "Parking receipt",
+    kind: "Timesheet evidence",
+    url: "https://example.com/parking-receipt.pdf",
+    uploadedByRole: "locum",
+    uploadedById: "u1",
+    createdAt: Date.now() - 4 * 86400000,
+  },
+  {
+    id: "att-shift-s1",
+    ownerType: "shift",
+    ownerId: "s1",
+    name: "Riverside induction notes",
+    kind: "Shift brief",
+    url: "https://example.com/riverside-induction.pdf",
+    uploadedByRole: "practice",
+    uploadedById: "p1",
+    createdAt: Date.now() - 86400000,
+  },
+];
+
+const seedAvailability: LocumAvailabilityWindow[] = [
+  {
+    id: "av1",
+    locumId: "u1",
+    date: iso(addDays(today, 8)),
+    start: "09:00",
+    end: "18:00",
+    status: "Available",
+    note: "Consult-only or routine surgery cover.",
+    publicVisible: true,
+  },
+  {
+    id: "av2",
+    locumId: "u1",
+    date: iso(addDays(today, 10)),
+    start: "10:00",
+    end: "16:00",
+    status: "Tentative",
+    note: "Can confirm with 48h notice.",
+    publicVisible: true,
+  },
+];
+
+const seedCalendarSync: CalendarSyncSettings[] = [
+  {
+    id: "sync-u1-google",
+    ownerType: "locum",
+    ownerId: "u1",
+    provider: "google",
+    status: "Not connected",
+    calendarName: "Google Calendar",
+    placeholderOnly: true,
+  },
 ];
 
 interface State {
@@ -328,17 +801,49 @@ interface State {
   applications: Application[];
   timesheets: Timesheet[];
   invoices: Invoice[];
+  attachments: Attachment[];
+  guestApplicants: GuestApplicant[];
+  bookingRequests: BookingRequest[];
+  cancellations: Cancellation[];
+  locumAvailability: LocumAvailabilityWindow[];
+  calendarSyncSettings: CalendarSyncSettings[];
   setViewerRole: (r: ViewerRole) => void;
+  updateLocumProfile: (locumId: string, patch: Partial<Locum>) => void;
+  addAttachment: (input: Omit<Attachment, "id" | "createdAt">) => Attachment;
+  removeAttachment: (id: string) => void;
+  updatePracticePublicLink: (practiceId: string, patch: Partial<PublicLinkSettings>) => void;
+  updateLocumPublicProfile: (locumId: string, patch: Partial<LocumPublicProfileSettings>) => void;
+  addLocumAvailability: (input: Omit<LocumAvailabilityWindow, "id">) => LocumAvailabilityWindow;
+  removeLocumAvailability: (id: string) => void;
   addShift: (s: Omit<Shift, "id" | "createdAt" | "status">) => Shift;
-  cancelShift: (id: string) => void;
+  cancelShift: (id: string, reason?: string, note?: string) => void;
   apply: (shiftId: string, locumId: string, note?: string) => void;
   requestPublicShift: (request: PublicShiftRequest) => { ok: boolean; message: string };
-  withdraw: (appId: string) => void;
+  applyAsRegistered: (
+    shiftId: string,
+    locumId: string,
+    note?: string,
+    attachmentIds?: string[],
+  ) => void;
+  withdraw: (appId: string, reason?: string, note?: string) => void;
   confirmBooking: (appId: string) => void;
   notSelected: (appId: string) => void;
-  submitTimesheet: (t: Omit<Timesheet, "id" | "status">) => void;
+  sendBookingRequest: (
+    input: Omit<BookingRequest, "id" | "status" | "createdAt">,
+  ) => BookingRequest;
+  respondToBookingRequest: (
+    requestId: string,
+    status: "Accepted" | "Declined",
+    reason?: string,
+  ) => void;
+  cancelBookingRequest: (requestId: string, reason: string, note?: string) => void;
+  submitTimesheet: (t: Omit<Timesheet, "id" | "status"> & { attachmentIds?: string[] }) => void;
   approveTimesheet: (id: string) => void;
   createInvoiceDraft: (timesheetId: string) => void;
+  createInvoiceDraftFromTimesheet: (timesheetId: string) => Invoice | undefined;
+  issueInvoice: (invoiceId: string) => void;
+  connectGoogleCalendarPlaceholder: (ownerType: "practice" | "locum", ownerId: string) => void;
+  syncCalendarPlaceholder: (ownerType: "practice" | "locum", ownerId: string) => void;
   markCompleted: (shiftId: string) => void;
 }
 
@@ -350,22 +855,91 @@ export const useStore = create<State>((set, get) => ({
   locums: seedLocums,
   shifts: seedShifts,
   applications: seedApplications,
-  timesheets: [],
-  invoices: [],
+  timesheets: seedTimesheets,
+  invoices: seedInvoices,
+  attachments: seedAttachments,
+  guestApplicants: [],
+  bookingRequests: [],
+  cancellations: [],
+  locumAvailability: seedAvailability,
+  calendarSyncSettings: seedCalendarSync,
   setViewerRole: (r) => set({ viewerRole: r }),
+  updateLocumProfile: (locumId, patch) =>
+    set({ locums: get().locums.map((l) => (l.id === locumId ? { ...l, ...patch } : l)) }),
+  addAttachment: (input) => {
+    const attachment: Attachment = { ...input, id: `att${Date.now()}`, createdAt: Date.now() };
+    set({ attachments: [attachment, ...get().attachments] });
+    return attachment;
+  },
+  removeAttachment: (id) => set({ attachments: get().attachments.filter((a) => a.id !== id) }),
+  updatePracticePublicLink: (practiceId, patch) =>
+    set({
+      practices: get().practices.map((p) =>
+        p.id === practiceId
+          ? {
+              ...p,
+              shareSlug: patch.slug ?? p.shareSlug,
+              publicLink: {
+                ...(p.publicLink ?? publicPracticeLink(p.shareSlug, p.tradingName, "")),
+                ...patch,
+              },
+            }
+          : p,
+      ),
+    }),
+  updateLocumPublicProfile: (locumId, patch) =>
+    set({
+      locums: get().locums.map((l) =>
+        l.id === locumId
+          ? {
+              ...l,
+              publicProfile: {
+                ...(l.publicProfile ?? {
+                  enabled: true,
+                  slug: l.id,
+                  showRate: true,
+                  showDocuments: true,
+                  showAvailability: true,
+                }),
+                ...patch,
+              },
+            }
+          : l,
+      ),
+    }),
+  addLocumAvailability: (input) => {
+    const block: LocumAvailabilityWindow = { ...input, id: `av${Date.now()}` };
+    set({ locumAvailability: [block, ...get().locumAvailability] });
+    return block;
+  },
+  removeLocumAvailability: (id) =>
+    set({ locumAvailability: get().locumAvailability.filter((block) => block.id !== id) }),
   addShift: (s) => {
     const shift: Shift = { ...s, id: `s${Date.now()}`, createdAt: Date.now(), status: "Open" };
     set({ shifts: [shift, ...get().shifts] });
     return shift;
   },
-  cancelShift: (id) =>
+  cancelShift: (id, reason = "Practice no longer needs cover", note) =>
     set({
       shifts: get().shifts.map((s) => (s.id === id ? { ...s, status: "Cancelled" } : s)),
       applications: get().applications.map((a) =>
         a.shiftId === id && (a.status === "Applied" || a.status === "Booked")
-          ? { ...a, status: "Cancelled" }
+          ? { ...a, status: "Cancelled", updatedAt: Date.now() }
           : a,
       ),
+      cancellations: [
+        {
+          id: `c${Date.now()}`,
+          ownerType: "shift",
+          ownerId: id,
+          reason,
+          note,
+          cancelledByRole: "practice",
+          cancelledById: get().currentPracticeId,
+          createdAt: Date.now(),
+        },
+        ...get().cancellations,
+      ],
     }),
   apply: (shiftId, locumId, note) => {
     const existing = get().applications.some(
@@ -381,6 +955,7 @@ export const useStore = create<State>((set, get) => ({
       locumId,
       status: "Applied",
       note,
+      applicantKind: "registered",
       createdAt: Date.now(),
     };
     const shifts = get().shifts.map(
@@ -417,28 +992,23 @@ export const useStore = create<State>((set, get) => ({
     }
 
     const existingLocum = state.locums.find((l) => l.email.toLowerCase() === normalizedEmail);
-    const locum: Locum = existingLocum ?? {
-      id: `u${Date.now()}`,
-      displayName,
-      legalName: displayName,
-      role: request.role,
-      postcodeArea: "",
-      rating: 0,
-      completedShifts: 0,
-      rcvs: request.role === "Reception" ? undefined : "",
-      email: normalizedEmail,
-      whatsapp,
-      cvAttached: false,
-      bio: "Public calendar request. CV and references to be checked by the practice.",
-      experienceYears: 0,
-      hourlyRate: shift.hourlyRate,
-      documents: [{ name: "CV requested", status: "missing" }],
-    };
+    const guestApplicant: GuestApplicant | undefined = existingLocum
+      ? undefined
+      : {
+          id: `g${Date.now()}`,
+          displayName,
+          email: normalizedEmail,
+          whatsapp,
+          role: request.role,
+          cvUrl: request.cvUrl,
+          createdAt: Date.now(),
+        };
+    const applicantLocumId = existingLocum?.id ?? `guest-${guestApplicant!.id}`;
 
     const alreadyRequested = state.applications.some(
       (a) =>
         a.shiftId === shift.id &&
-        a.locumId === locum.id &&
+        (a.locumId === applicantLocumId || a.guestApplicantId === guestApplicant?.id) &&
         (a.status === "Applied" || a.status === "Booked"),
     );
     if (alreadyRequested) {
@@ -448,14 +1018,19 @@ export const useStore = create<State>((set, get) => ({
     const application: Application = {
       id: `a${Date.now()}`,
       shiftId: shift.id,
-      locumId: locum.id,
+      locumId: applicantLocumId,
       status: "Applied",
+      applicantKind: existingLocum ? "registered" : "guest",
+      guestApplicantId: guestApplicant?.id,
       note,
+      customAnswers: request.customAnswers,
       createdAt: Date.now(),
     };
 
     set({
-      locums: existingLocum ? state.locums : [...state.locums, locum],
+      guestApplicants: guestApplicant
+        ? [guestApplicant, ...state.guestApplicants]
+        : state.guestApplicants,
       applications: [...state.applications, application],
       shifts: state.shifts.map((s) =>
         s.id === shift.id && s.status === "Open" ? { ...s, status: "New applicants" } : s,
@@ -464,11 +1039,39 @@ export const useStore = create<State>((set, get) => ({
 
     return { ok: true, message: "Request sent. The practice can review and confirm it." };
   },
-  withdraw: (appId) =>
+  applyAsRegistered: (shiftId, locumId, note, attachmentIds) => {
+    get().apply(shiftId, locumId, note);
+    if (attachmentIds?.length) {
+      const app = get()
+        .applications.filter((a) => a.shiftId === shiftId && a.locumId === locumId)
+        .sort((a, b) => b.createdAt - a.createdAt)[0];
+      if (app) {
+        set({
+          applications: get().applications.map((a) =>
+            a.id === app.id ? { ...a, attachmentIds, updatedAt: Date.now() } : a,
+          ),
+        });
+      }
+    }
+  },
+  withdraw: (appId, reason = "Locum unavailable", note) =>
     set({
       applications: get().applications.map((a) =>
-        a.id === appId ? { ...a, status: "Withdrawn" } : a,
+        a.id === appId ? { ...a, status: "Withdrawn", updatedAt: Date.now() } : a,
       ),
+      cancellations: [
+        {
+          id: `c${Date.now()}`,
+          ownerType: "application",
+          ownerId: appId,
+          reason,
+          note,
+          cancelledByRole: "locum",
+          cancelledById: get().currentLocumId,
+          createdAt: Date.now(),
+        },
+        ...get().cancellations,
+      ],
     }),
   confirmBooking: (appId) => {
     const apps = get().applications;
@@ -499,22 +1102,78 @@ export const useStore = create<State>((set, get) => ({
   notSelected: (appId) =>
     set({
       applications: get().applications.map((a) =>
-        a.id === appId ? { ...a, status: "Not selected" } : a,
+        a.id === appId ? { ...a, status: "Not selected", updatedAt: Date.now() } : a,
       ),
     }),
+  sendBookingRequest: (input) => {
+    const request: BookingRequest = {
+      ...input,
+      id: `br${Date.now()}`,
+      status: "Sent",
+      createdAt: Date.now(),
+    };
+    set({ bookingRequests: [request, ...get().bookingRequests] });
+    return request;
+  },
+  respondToBookingRequest: (requestId, status, reason) =>
+    set({
+      bookingRequests: get().bookingRequests.map((request) =>
+        request.id === requestId
+          ? {
+              ...request,
+              status,
+              respondedAt: Date.now(),
+              declineReason: status === "Declined" ? reason : request.declineReason,
+            }
+          : request,
+      ),
+    }),
+  cancelBookingRequest: (requestId, reason, note) =>
+    set({
+      bookingRequests: get().bookingRequests.map((request) =>
+        request.id === requestId
+          ? { ...request, status: "Cancelled", cancelReason: reason }
+          : request,
+      ),
+      cancellations: [
+        {
+          id: `c${Date.now()}`,
+          ownerType: "bookingRequest",
+          ownerId: requestId,
+          reason,
+          note,
+          cancelledByRole: "practice",
+          cancelledById: get().currentPracticeId,
+          createdAt: Date.now(),
+        },
+        ...get().cancellations,
+      ],
+    }),
   submitTimesheet: (t) => {
-    const ts: Timesheet = { ...t, id: `t${Date.now()}`, status: "Submitted" };
+    const ts: Timesheet = {
+      ...t,
+      id: `t${Date.now()}`,
+      status: "Submitted",
+      submittedAt: Date.now(),
+    };
     set({ timesheets: [...get().timesheets, ts] });
   },
   approveTimesheet: (id) =>
     set({
-      timesheets: get().timesheets.map((t) => (t.id === id ? { ...t, status: "Approved" } : t)),
+      timesheets: get().timesheets.map((t) =>
+        t.id === id ? { ...t, status: "Approved", approvedAt: Date.now() } : t,
+      ),
     }),
   createInvoiceDraft: (timesheetId) => {
+    get().createInvoiceDraftFromTimesheet(timesheetId);
+  },
+  createInvoiceDraftFromTimesheet: (timesheetId) => {
     const t = get().timesheets.find((x) => x.id === timesheetId);
-    if (!t) return;
+    if (!t || t.status !== "Approved") return undefined;
+    const existing = get().invoices.find((invoice) => invoice.timesheetId === timesheetId);
+    if (existing) return existing;
     const shift = get().shifts.find((s) => s.id === t.shiftId);
-    if (!shift) return;
+    if (!shift) return undefined;
     const [sh, sm] = t.actualStart.split(":").map(Number);
     const [eh, em] = t.actualEnd.split(":").map(Number);
     let mins = eh * 60 + em - (sh * 60 + sm);
@@ -531,9 +1190,43 @@ export const useStore = create<State>((set, get) => ({
       rate: shift.hourlyRate,
       total,
       status: "Draft",
+      timesheetId,
     };
     set({ invoices: [...get().invoices, inv] });
+    return inv;
   },
+  issueInvoice: (invoiceId) =>
+    set({
+      invoices: get().invoices.map((invoice) =>
+        invoice.id === invoiceId ? { ...invoice, status: "Issued", issuedAt: Date.now() } : invoice,
+      ),
+    }),
+  connectGoogleCalendarPlaceholder: (ownerType, ownerId) =>
+    set({
+      calendarSyncSettings: [
+        {
+          id: `sync${Date.now()}`,
+          ownerType,
+          ownerId,
+          provider: "google",
+          status: "Connected",
+          calendarName: "Google Calendar",
+          lastSyncedAt: Date.now(),
+          placeholderOnly: true,
+        },
+        ...get().calendarSyncSettings.filter(
+          (setting) => !(setting.ownerType === ownerType && setting.ownerId === ownerId),
+        ),
+      ],
+    }),
+  syncCalendarPlaceholder: (ownerType, ownerId) =>
+    set({
+      calendarSyncSettings: get().calendarSyncSettings.map((setting) =>
+        setting.ownerType === ownerType && setting.ownerId === ownerId
+          ? { ...setting, status: "Connected", lastSyncedAt: Date.now() }
+          : setting,
+      ),
+    }),
   markCompleted: (shiftId) =>
     set({
       shifts: get().shifts.map((s) => (s.id === shiftId ? { ...s, status: "Completed" } : s)),
@@ -550,4 +1243,12 @@ export const calcShiftValue = (
   if (!s.lunchPaid) mins -= s.lunchMinutes;
   const hours = Math.max(0, mins / 60);
   return hours * s.hourlyRate * s.positionsNeeded;
+};
+
+export const calcShiftHours = (s: Pick<Shift, "start" | "end" | "lunchMinutes" | "lunchPaid">) => {
+  const [sh, sm] = s.start.split(":").map(Number);
+  const [eh, em] = s.end.split(":").map(Number);
+  let mins = eh * 60 + em - (sh * 60 + sm);
+  if (!s.lunchPaid) mins -= s.lunchMinutes;
+  return Math.max(0, mins / 60);
 };
