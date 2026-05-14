@@ -8,14 +8,16 @@ import {
   Copy,
   ExternalLink,
   Globe,
+  ListFilter,
   Mail,
   MapPin,
   PawPrint,
   Phone,
   Send,
+  X,
   type LucideIcon,
 } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RoleChip, fmtDate, fmtGBP } from "@/components/Bits";
 import {
@@ -81,7 +83,7 @@ function PublicBookingCalendar() {
   const [cursor, setCursor] = useState(() =>
     firstOpenDate ? new Date(`${firstOpenDate}T00:00:00`) : new Date(),
   );
-  const [role, setRole] = useState<Role | "All">("All");
+  const [selectedRoles, setSelectedRoles] = useState<Role[]>(visibleRoles);
   const [selectedDate, setSelectedDate] = useState(() => firstOpenDate ?? todayIso);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
 
@@ -92,11 +94,11 @@ function PublicBookingCalendar() {
         if (shift.practiceId !== practice.id) return false;
         if (shift.date < todayIso) return false;
         if (!visibleRoles.includes(shift.role)) return false;
-        if (role !== "All" && shift.role !== role) return false;
+        if (selectedRoles.length > 0 && !selectedRoles.includes(shift.role)) return false;
         return true;
       })
       .sort((a, b) => `${a.date}${a.start}`.localeCompare(`${b.date}${b.start}`));
-  }, [practice, role, shifts, todayIso, visibleRoles]);
+  }, [practice, selectedRoles, shifts, todayIso, visibleRoles]);
   const publicShifts = visibleFutureShifts.filter(
     (shift) => shift.status === "Open" || shift.status === "New applicants",
   );
@@ -249,28 +251,18 @@ function PublicBookingCalendar() {
             </div>
 
             <div className="mt-5">
-              <div className="mb-2 text-sm font-medium">Role</div>
-              <div className="flex flex-wrap gap-2">
-                <RolePickerButton
-                  selected={role === "All"}
-                  onClick={() => {
-                    setRole("All");
-                  }}
-                >
-                  All roles
-                </RolePickerButton>
-                {visibleRoles.map((item) => (
-                  <RolePickerButton
-                    key={item}
-                    selected={role === item}
-                    onClick={() => {
-                      setRole(item);
-                    }}
-                  >
-                    <RoleChip role={item} />
-                  </RolePickerButton>
-                ))}
-              </div>
+              <RoleMultiSelect
+                roles={visibleRoles}
+                selectedRoles={selectedRoles}
+                onToggle={(item) =>
+                  setSelectedRoles((current) =>
+                    current.includes(item)
+                      ? current.filter((roleItem) => roleItem !== item)
+                      : [...current, item],
+                  )
+                }
+                onClear={() => setSelectedRoles([])}
+              />
             </div>
           </div>
 
@@ -389,26 +381,62 @@ function IconLink({
   );
 }
 
-function RolePickerButton({
-  selected,
-  onClick,
-  children,
+function RoleMultiSelect({
+  roles,
+  selectedRoles,
+  onToggle,
+  onClear,
 }: {
-  selected: boolean;
-  onClick: () => void;
-  children: ReactNode;
+  roles: Role[];
+  selectedRoles: Role[];
+  onToggle: (role: Role) => void;
+  onClear: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "inline-flex h-8 items-center rounded-md border bg-background px-2 text-xs font-medium transition-colors hover:bg-accent",
-        selected && "border-primary bg-primary/10 ring-1 ring-primary/30",
-      )}
-    >
-      {children}
-    </button>
+    <div>
+      <div className="mb-2 flex items-center gap-2 text-sm font-medium">
+        <ListFilter className="size-4 text-muted-foreground" />
+        Role
+      </div>
+      <div className="rounded-md border bg-background p-2">
+        <div className="flex min-h-8 flex-wrap items-center gap-1.5">
+          {selectedRoles.length === 0 ? (
+            <span className="px-1 text-sm text-muted-foreground">Empty</span>
+          ) : (
+            selectedRoles.map((item) => <RoleChip key={item} role={item} />)
+          )}
+          {selectedRoles.length > 0 && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="ml-auto inline-grid size-6 place-items-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Clear roles"
+              title="Clear roles"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
+        </div>
+        <div className="mt-2 flex flex-wrap gap-1.5 border-t pt-2">
+          {roles.map((item) => {
+            const selected = selectedRoles.includes(item);
+            return (
+              <button
+                key={item}
+                type="button"
+                onClick={() => onToggle(item)}
+                className={cn(
+                  "inline-flex h-7 items-center rounded-md border px-1.5 transition-colors hover:bg-accent",
+                  selected ? "border-primary bg-primary/10" : "bg-background opacity-70",
+                )}
+              >
+                <RoleChip role={item} />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 
