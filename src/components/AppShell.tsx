@@ -1,6 +1,15 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import {
-  LayoutDashboard, PlusCircle, Calendar, Clock, Search, BookOpen, User, PawPrint, Building2, Users,
+  LayoutDashboard,
+  PlusCircle,
+  Calendar,
+  Clock,
+  Search,
+  BookOpen,
+  User,
+  PawPrint,
+  Building2,
+  Users,
 } from "lucide-react";
 import { useStore, type ViewerRole } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -23,8 +32,11 @@ const locumNav = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const viewerRole = useStore((s) => s.viewerRole);
   const setViewerRole = useStore((s) => s.setViewerRole);
+  const currentPracticeId = useStore((s) => s.currentPracticeId);
+  const practices = useStore((s) => s.practices);
   const location = useLocation();
   const nav = viewerRole === "practice" ? practiceNav : locumNav;
+  const practice = practices.find((item) => item.id === currentPracticeId);
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -60,7 +72,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
-        <div className="p-3 border-t">
+        <div className="space-y-2 p-3 border-t">
+          {viewerRole === "practice" && practice && (
+            <Link
+              to="/book/$shareSlug"
+              params={{ shareSlug: practice.shareSlug }}
+              className="flex items-center gap-2.5 rounded-md border bg-card px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent"
+            >
+              <Calendar className="size-4 text-primary" />
+              Public calendar
+            </Link>
+          )}
           <RoleSwitch value={viewerRole} onChange={setViewerRole} />
         </div>
       </aside>
@@ -79,15 +101,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 function RoleSwitch({
-  value, onChange, compact,
-}: { value: ViewerRole; onChange: (r: ViewerRole) => void; compact?: boolean }) {
+  value,
+  onChange,
+  compact,
+}: {
+  value: ViewerRole;
+  onChange: (r: ViewerRole) => void;
+  compact?: boolean;
+}) {
   return (
     <div className={cn("flex items-center rounded-md border bg-card p-0.5", compact && "text-xs")}>
       <button
         onClick={() => onChange("practice")}
         className={cn(
           "flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-xs font-medium transition-colors",
-          value === "practice" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+          value === "practice"
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:text-foreground",
         )}
       >
         <Building2 className="size-3.5" /> Practice
@@ -96,7 +126,9 @@ function RoleSwitch({
         onClick={() => onChange("locum")}
         className={cn(
           "flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-xs font-medium transition-colors",
-          value === "locum" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+          value === "locum"
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:text-foreground",
         )}
       >
         <Users className="size-3.5" /> Locum
@@ -106,8 +138,14 @@ function RoleSwitch({
 }
 
 export function PageHeader({
-  title, description, actions,
-}: { title: string; description?: string; actions?: React.ReactNode }) {
+  title,
+  description,
+  actions,
+}: {
+  title: string;
+  description?: string;
+  actions?: React.ReactNode;
+}) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
       <div>

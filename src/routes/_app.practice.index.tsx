@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/AppShell";
 import { useStore } from "@/lib/store";
 import { DateBlock, RoleChip, StatusChip, fmtDate } from "@/components/Bits";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Mail, FileText, Plus } from "lucide-react";
+import { CalendarDays, MessageCircle, Mail, FileText, Plus } from "lucide-react";
 import { useState } from "react";
 import { ApplicationsModal } from "@/components/ApplicationsModal";
 
@@ -20,7 +20,11 @@ function PracticeDashboard() {
 
   const newApps = applications
     .filter((a) => a.status === "Applied" && myShifts.some((s) => s.id === a.shiftId))
-    .map((a) => ({ a, s: myShifts.find((s) => s.id === a.shiftId)!, l: locums.find((l) => l.id === a.locumId)! }))
+    .map((a) => ({
+      a,
+      s: myShifts.find((s) => s.id === a.shiftId)!,
+      l: locums.find((l) => l.id === a.locumId)!,
+    }))
     .sort((x, y) => x.s.date.localeCompare(y.s.date));
 
   const upcoming = myShifts
@@ -37,11 +41,36 @@ function PracticeDashboard() {
         title={`Hi, ${practice.tradingName}`}
         description="Here's what needs you today."
         actions={
-          <Button asChild>
-            <Link to="/practice/post"><Plus className="size-4" /> Post shift</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" asChild>
+              <Link to="/book/$shareSlug" params={{ shareSlug: practice.shareSlug }}>
+                <CalendarDays className="size-4" /> Share calendar
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link to="/practice/post">
+                <Plus className="size-4" /> Post shift
+              </Link>
+            </Button>
+          </div>
         }
       />
+
+      <section className="mb-6 rounded-lg border bg-card p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="font-semibold">Public availability calendar</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Share a live link so locums and practice staff can see open dates and request shifts.
+            </p>
+          </div>
+          <Button variant="outline" asChild>
+            <Link to="/book/$shareSlug" params={{ shareSlug: practice.shareSlug }}>
+              Open booking link
+            </Link>
+          </Button>
+        </div>
+      </section>
 
       <div className="grid lg:grid-cols-2 gap-6">
         <section className="rounded-xl border bg-card">
@@ -53,7 +82,9 @@ function PracticeDashboard() {
             {newApps.length === 0 && (
               <div className="p-8 text-center">
                 <p className="text-sm text-muted-foreground mb-3">No new applications.</p>
-                <Button variant="outline" asChild><Link to="/practice/post">Post shift</Link></Button>
+                <Button variant="outline" asChild>
+                  <Link to="/practice/post">Post shift</Link>
+                </Button>
               </div>
             )}
             {newApps.map(({ a, s, l }) => (
@@ -66,13 +97,18 @@ function PracticeDashboard() {
                   </div>
                   <div className="mt-1 text-sm">
                     <span className="font-medium">{l.displayName}</span>
-                    <span className="text-muted-foreground"> · ★ {l.rating} · {l.completedShifts} shifts</span>
+                    <span className="text-muted-foreground">
+                      {" "}
+                      · ★ {l.rating} · {l.completedShifts} shifts
+                    </span>
                   </div>
                   <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                     <FileText className="size-3" /> CV attached
                   </div>
                 </div>
-                <Button size="sm" onClick={() => setOpenShiftId(s.id)}>Review</Button>
+                <Button size="sm" onClick={() => setOpenShiftId(s.id)}>
+                  Review
+                </Button>
               </div>
             ))}
           </div>
@@ -85,7 +121,9 @@ function PracticeDashboard() {
           </div>
           <div className="divide-y">
             {upcoming.length === 0 && (
-              <div className="p-8 text-center text-sm text-muted-foreground">No booked shifts yet.</div>
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                No booked shifts yet.
+              </div>
             )}
             {upcoming.map(({ s, l }) => {
               const loc = practice.locations.find((x) => x.id === s.locationId);
@@ -93,22 +131,33 @@ function PracticeDashboard() {
                 <div key={s.id} className="p-4 flex items-center gap-4">
                   <DateBlock date={s.date} />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2"><RoleChip role={s.role} /></div>
+                    <div className="flex items-center gap-2">
+                      <RoleChip role={s.role} />
+                    </div>
                     <div className="text-sm mt-1">
                       <span className="font-medium">{l?.displayName ?? "—"}</span>
-                      <span className="text-muted-foreground"> · {s.start}–{s.end} · {loc?.name}</span>
+                      <span className="text-muted-foreground">
+                        {" "}
+                        · {s.start}–{s.end} · {loc?.name}
+                      </span>
                     </div>
                     <div className="text-xs text-muted-foreground mt-0.5">{fmtDate(s.date)}</div>
                   </div>
                   {l && (
                     <div className="flex gap-1.5">
                       <Button size="sm" variant="outline" asChild>
-                        <a href={`https://wa.me/${l.whatsapp.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Hi ${l.displayName}, looking forward to your ${s.role} shift on ${fmtDate(s.date)}.`)}`} target="_blank" rel="noreferrer">
+                        <a
+                          href={`https://wa.me/${l.whatsapp.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Hi ${l.displayName}, looking forward to your ${s.role} shift on ${fmtDate(s.date)}.`)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
                           <MessageCircle className="size-4" />
                         </a>
                       </Button>
                       <Button size="sm" variant="outline" asChild>
-                        <a href={`mailto:${l.email}?subject=${encodeURIComponent(`${s.role} shift on ${fmtDate(s.date)}`)}`}>
+                        <a
+                          href={`mailto:${l.email}?subject=${encodeURIComponent(`${s.role} shift on ${fmtDate(s.date)}`)}`}
+                        >
                           <Mail className="size-4" />
                         </a>
                       </Button>

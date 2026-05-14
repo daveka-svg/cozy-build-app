@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BookShareSlugRouteImport } from './routes/book.$shareSlug'
 import { Route as AppPracticeIndexRouteImport } from './routes/_app.practice.index'
 import { Route as AppLocumIndexRouteImport } from './routes/_app.locum.index'
 import { Route as AppPracticeShiftsRouteImport } from './routes/_app.practice.shifts'
@@ -34,6 +35,11 @@ const AppRoute = AppRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BookShareSlugRoute = BookShareSlugRouteImport.update({
+  id: '/book/$shareSlug',
+  path: '/book/$shareSlug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppPracticeIndexRoute = AppPracticeIndexRouteImport.update({
@@ -85,6 +91,7 @@ const AppLocumBookingsRoute = AppLocumBookingsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/book/$shareSlug': typeof BookShareSlugRoute
   '/locum/bookings': typeof AppLocumBookingsRoute
   '/locum/find': typeof AppLocumFindRoute
   '/locum/profile': typeof AppLocumProfileRoute
@@ -98,6 +105,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/book/$shareSlug': typeof BookShareSlugRoute
   '/locum/bookings': typeof AppLocumBookingsRoute
   '/locum/find': typeof AppLocumFindRoute
   '/locum/profile': typeof AppLocumProfileRoute
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/book/$shareSlug': typeof BookShareSlugRoute
   '/_app/locum/bookings': typeof AppLocumBookingsRoute
   '/_app/locum/find': typeof AppLocumFindRoute
   '/_app/locum/profile': typeof AppLocumProfileRoute
@@ -128,6 +137,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/sitemap.xml'
+    | '/book/$shareSlug'
     | '/locum/bookings'
     | '/locum/find'
     | '/locum/profile'
@@ -141,6 +151,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/sitemap.xml'
+    | '/book/$shareSlug'
     | '/locum/bookings'
     | '/locum/find'
     | '/locum/profile'
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/sitemap.xml'
+    | '/book/$shareSlug'
     | '/_app/locum/bookings'
     | '/_app/locum/find'
     | '/_app/locum/profile'
@@ -170,6 +182,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  BookShareSlugRoute: typeof BookShareSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -193,6 +206,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/book/$shareSlug': {
+      id: '/book/$shareSlug'
+      path: '/book/$shareSlug'
+      fullPath: '/book/$shareSlug'
+      preLoaderRoute: typeof BookShareSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/practice/': {
@@ -291,7 +311,18 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  BookShareSlugRoute: BookShareSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

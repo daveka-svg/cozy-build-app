@@ -9,6 +9,7 @@ export interface Practice {
   id: string;
   tradingName: string;
   legalName: string;
+  shareSlug: string;
   website: string;
   email: string;
   whatsapp: string;
@@ -86,6 +87,16 @@ export interface Invoice {
 
 export type ViewerRole = "practice" | "locum";
 
+export interface PublicShiftRequest {
+  shiftId: string;
+  practiceSlug: string;
+  displayName: string;
+  email: string;
+  whatsapp: string;
+  role: Role;
+  note?: string;
+}
+
 const today = new Date();
 const iso = (d: Date) => format(d, "yyyy-MM-dd");
 
@@ -94,6 +105,7 @@ const seedPractices: Practice[] = [
     id: "p1",
     tradingName: "Riverside Vets",
     legalName: "Riverside Veterinary Ltd",
+    shareSlug: "riverside-vets",
     website: "https://riversidevets.example.com",
     email: "manager@riversidevets.example.com",
     whatsapp: "+447700900111",
@@ -107,6 +119,7 @@ const seedPractices: Practice[] = [
     id: "p2",
     tradingName: "Oakfield Animal Hospital",
     legalName: "Oakfield Vets Ltd",
+    shareSlug: "oakfield-animal-hospital",
     website: "https://oakfield.example.com",
     email: "ops@oakfield.example.com",
     whatsapp: "+447700900222",
@@ -176,54 +189,133 @@ const seedLocums: Locum[] = [
 
 const seedShifts: Shift[] = [
   {
-    id: "s1", practiceId: "p1", locationId: "l1", role: "Vet",
-    date: iso(addDays(today, 2)), start: "09:00", end: "18:00",
-    lunchMinutes: 30, lunchPaid: false, hourlyRate: 65, positionsNeeded: 1,
-    area: "Small animals", notes: "Consults only. No sole charge.",
-    status: "New applicants", createdAt: Date.now() - 86400000,
+    id: "s1",
+    practiceId: "p1",
+    locationId: "l1",
+    role: "Vet",
+    date: iso(addDays(today, 2)),
+    start: "09:00",
+    end: "18:00",
+    lunchMinutes: 30,
+    lunchPaid: false,
+    hourlyRate: 65,
+    positionsNeeded: 1,
+    area: "Small animals",
+    notes: "Consults only. No sole charge.",
+    status: "New applicants",
+    createdAt: Date.now() - 86400000,
   },
   {
-    id: "s2", practiceId: "p1", locationId: "l1", role: "Nurse",
-    date: iso(addDays(today, 4)), start: "08:30", end: "17:00",
-    lunchMinutes: 30, lunchPaid: false, hourlyRate: 28, positionsNeeded: 2,
-    area: "Nurse clinics", notes: "Two nurses needed.",
-    status: "Open", createdAt: Date.now() - 43200000,
+    id: "s2",
+    practiceId: "p1",
+    locationId: "l1",
+    role: "Nurse",
+    date: iso(addDays(today, 4)),
+    start: "08:30",
+    end: "17:00",
+    lunchMinutes: 30,
+    lunchPaid: false,
+    hourlyRate: 28,
+    positionsNeeded: 2,
+    area: "Nurse clinics",
+    notes: "Two nurses needed.",
+    status: "Open",
+    createdAt: Date.now() - 43200000,
   },
   {
-    id: "s3", practiceId: "p2", locationId: "l3", role: "Reception",
-    date: iso(addDays(today, 1)), start: "09:00", end: "17:30",
-    lunchMinutes: 30, lunchPaid: true, hourlyRate: 16, positionsNeeded: 1,
-    area: "Front desk", notes: "Busy reception. Phones and payments.",
-    status: "New applicants", createdAt: Date.now() - 7200000,
+    id: "s3",
+    practiceId: "p2",
+    locationId: "l3",
+    role: "Reception",
+    date: iso(addDays(today, 1)),
+    start: "09:00",
+    end: "17:30",
+    lunchMinutes: 30,
+    lunchPaid: true,
+    hourlyRate: 16,
+    positionsNeeded: 1,
+    area: "Front desk",
+    notes: "Busy reception. Phones and payments.",
+    status: "New applicants",
+    createdAt: Date.now() - 7200000,
   },
   {
-    id: "s4", practiceId: "p1", locationId: "l2", role: "Vet",
-    date: iso(addDays(today, 7)), start: "10:00", end: "19:00",
-    lunchMinutes: 60, lunchPaid: false, hourlyRate: 70, positionsNeeded: 1,
-    area: "Surgery", notes: "One dental in the morning.",
-    status: "Open", createdAt: Date.now() - 3600000,
+    id: "s4",
+    practiceId: "p1",
+    locationId: "l2",
+    role: "Vet",
+    date: iso(addDays(today, 7)),
+    start: "10:00",
+    end: "19:00",
+    lunchMinutes: 60,
+    lunchPaid: false,
+    hourlyRate: 70,
+    positionsNeeded: 1,
+    area: "Surgery",
+    notes: "One dental in the morning.",
+    status: "Open",
+    createdAt: Date.now() - 3600000,
   },
   {
-    id: "s5", practiceId: "p2", locationId: "l3", role: "Nurse",
-    date: iso(addDays(today, -3)), start: "09:00", end: "17:00",
-    lunchMinutes: 30, lunchPaid: false, hourlyRate: 26, positionsNeeded: 1,
-    area: "Nurse clinics", notes: "",
-    status: "Booked", createdAt: Date.now() - 7 * 86400000,
+    id: "s5",
+    practiceId: "p2",
+    locationId: "l3",
+    role: "Nurse",
+    date: iso(addDays(today, -3)),
+    start: "09:00",
+    end: "17:00",
+    lunchMinutes: 30,
+    lunchPaid: false,
+    hourlyRate: 26,
+    positionsNeeded: 1,
+    area: "Nurse clinics",
+    notes: "",
+    status: "Booked",
+    createdAt: Date.now() - 7 * 86400000,
   },
   {
-    id: "s6", practiceId: "p1", locationId: "l1", role: "Reception",
-    date: iso(addDays(today, -7)), start: "09:00", end: "17:00",
-    lunchMinutes: 30, lunchPaid: false, hourlyRate: 16, positionsNeeded: 1,
-    area: "Front desk", notes: "",
-    status: "Completed", createdAt: Date.now() - 14 * 86400000,
+    id: "s6",
+    practiceId: "p1",
+    locationId: "l1",
+    role: "Reception",
+    date: iso(addDays(today, -7)),
+    start: "09:00",
+    end: "17:00",
+    lunchMinutes: 30,
+    lunchPaid: false,
+    hourlyRate: 16,
+    positionsNeeded: 1,
+    area: "Front desk",
+    notes: "",
+    status: "Completed",
+    createdAt: Date.now() - 14 * 86400000,
   },
 ];
 
 const seedApplications: Application[] = [
-  { id: "a1", shiftId: "s1", locumId: "u1", status: "Applied", note: "Available, can do consults.", createdAt: Date.now() - 3600000 },
+  {
+    id: "a1",
+    shiftId: "s1",
+    locumId: "u1",
+    status: "Applied",
+    note: "Available, can do consults.",
+    createdAt: Date.now() - 3600000,
+  },
   { id: "a2", shiftId: "s3", locumId: "u3", status: "Applied", createdAt: Date.now() - 1800000 },
-  { id: "a3", shiftId: "s5", locumId: "u2", status: "Booked", createdAt: Date.now() - 6 * 86400000 },
-  { id: "a4", shiftId: "s6", locumId: "u3", status: "Booked", createdAt: Date.now() - 13 * 86400000 },
+  {
+    id: "a3",
+    shiftId: "s5",
+    locumId: "u2",
+    status: "Booked",
+    createdAt: Date.now() - 6 * 86400000,
+  },
+  {
+    id: "a4",
+    shiftId: "s6",
+    locumId: "u3",
+    status: "Booked",
+    createdAt: Date.now() - 13 * 86400000,
+  },
 ];
 
 interface State {
@@ -240,6 +332,7 @@ interface State {
   addShift: (s: Omit<Shift, "id" | "createdAt" | "status">) => Shift;
   cancelShift: (id: string) => void;
   apply: (shiftId: string, locumId: string, note?: string) => void;
+  requestPublicShift: (request: PublicShiftRequest) => { ok: boolean; message: string };
   withdraw: (appId: string) => void;
   confirmBooking: (appId: string) => void;
   notSelected: (appId: string) => void;
@@ -275,13 +368,101 @@ export const useStore = create<State>((set, get) => ({
       ),
     }),
   apply: (shiftId, locumId, note) => {
+    const existing = get().applications.some(
+      (a) =>
+        a.shiftId === shiftId &&
+        a.locumId === locumId &&
+        (a.status === "Applied" || a.status === "Booked"),
+    );
+    if (existing) return;
     const a: Application = {
-      id: `a${Date.now()}`, shiftId, locumId, status: "Applied", note, createdAt: Date.now(),
+      id: `a${Date.now()}`,
+      shiftId,
+      locumId,
+      status: "Applied",
+      note,
+      createdAt: Date.now(),
     };
-    const shifts = get().shifts.map((s): Shift =>
-      s.id === shiftId && s.status === "Open" ? { ...s, status: "New applicants" as ShiftStatus } : s,
+    const shifts = get().shifts.map(
+      (s): Shift =>
+        s.id === shiftId && s.status === "Open"
+          ? { ...s, status: "New applicants" as ShiftStatus }
+          : s,
     );
     set({ applications: [...get().applications, a], shifts });
+  },
+  requestPublicShift: (request) => {
+    const state = get();
+    const displayName = request.displayName.trim();
+    const normalizedEmail = request.email.trim().toLowerCase();
+    const whatsapp = request.whatsapp.trim();
+    const note = request.note?.trim();
+    const practice = state.practices.find((p) => p.shareSlug === request.practiceSlug);
+    const shift = state.shifts.find(
+      (s) => s.id === request.shiftId && s.practiceId === practice?.id,
+    );
+    const todayIso = new Date().toISOString().slice(0, 10);
+
+    if (!displayName || !normalizedEmail || !whatsapp) {
+      return { ok: false, message: "Add your name, email, and WhatsApp or phone number." };
+    }
+    if (!practice || !shift) {
+      return { ok: false, message: "This booking link is no longer available." };
+    }
+    if (shift.date < todayIso || (shift.status !== "Open" && shift.status !== "New applicants")) {
+      return { ok: false, message: "That shift is not open for requests anymore." };
+    }
+    if (shift.role !== request.role) {
+      return { ok: false, message: `This shift needs a ${shift.role}.` };
+    }
+
+    const existingLocum = state.locums.find((l) => l.email.toLowerCase() === normalizedEmail);
+    const locum: Locum = existingLocum ?? {
+      id: `u${Date.now()}`,
+      displayName,
+      legalName: displayName,
+      role: request.role,
+      postcodeArea: "",
+      rating: 0,
+      completedShifts: 0,
+      rcvs: request.role === "Reception" ? undefined : "",
+      email: normalizedEmail,
+      whatsapp,
+      cvAttached: false,
+      bio: "Public calendar request. CV and references to be checked by the practice.",
+      experienceYears: 0,
+      hourlyRate: shift.hourlyRate,
+      documents: [{ name: "CV requested", status: "missing" }],
+    };
+
+    const alreadyRequested = state.applications.some(
+      (a) =>
+        a.shiftId === shift.id &&
+        a.locumId === locum.id &&
+        (a.status === "Applied" || a.status === "Booked"),
+    );
+    if (alreadyRequested) {
+      return { ok: false, message: "You already requested this shift." };
+    }
+
+    const application: Application = {
+      id: `a${Date.now()}`,
+      shiftId: shift.id,
+      locumId: locum.id,
+      status: "Applied",
+      note,
+      createdAt: Date.now(),
+    };
+
+    set({
+      locums: existingLocum ? state.locums : [...state.locums, locum],
+      applications: [...state.applications, application],
+      shifts: state.shifts.map((s) =>
+        s.id === shift.id && s.status === "Open" ? { ...s, status: "New applicants" } : s,
+      ),
+    });
+
+    return { ok: true, message: "Request sent. The practice can review and confirm it." };
   },
   withdraw: (appId) =>
     set({
@@ -295,16 +476,23 @@ export const useStore = create<State>((set, get) => ({
     if (!app) return;
     const shift = get().shifts.find((s) => s.id === app.shiftId);
     if (!shift) return;
-    const confirmedCount = apps.filter((a) => a.shiftId === shift.id && a.status === "Booked").length + 1;
+    const confirmedCount =
+      apps.filter((a) => a.shiftId === shift.id && a.status === "Booked").length + 1;
     const newApps = apps.map((a) => {
       if (a.id === appId) return { ...a, status: "Booked" as AppStatus };
-      if (a.shiftId === shift.id && a.status === "Applied" && confirmedCount >= shift.positionsNeeded) {
+      if (
+        a.shiftId === shift.id &&
+        a.status === "Applied" &&
+        confirmedCount >= shift.positionsNeeded
+      ) {
         return { ...a, status: "Not selected" as AppStatus };
       }
       return a;
     });
     const newShifts = get().shifts.map((s) =>
-      s.id === shift.id && confirmedCount >= shift.positionsNeeded ? { ...s, status: "Booked" as ShiftStatus } : s,
+      s.id === shift.id && confirmedCount >= shift.positionsNeeded
+        ? { ...s, status: "Booked" as ShiftStatus }
+        : s,
     );
     set({ applications: newApps, shifts: newShifts });
   },
@@ -319,7 +507,9 @@ export const useStore = create<State>((set, get) => ({
     set({ timesheets: [...get().timesheets, ts] });
   },
   approveTimesheet: (id) =>
-    set({ timesheets: get().timesheets.map((t) => (t.id === id ? { ...t, status: "Approved" } : t)) }),
+    set({
+      timesheets: get().timesheets.map((t) => (t.id === id ? { ...t, status: "Approved" } : t)),
+    }),
   createInvoiceDraft: (timesheetId) => {
     const t = get().timesheets.find((x) => x.id === timesheetId);
     if (!t) return;
@@ -334,17 +524,26 @@ export const useStore = create<State>((set, get) => ({
     const inv: Invoice = {
       id: `i${Date.now()}`,
       number: `INV-${1000 + get().invoices.length + 1}`,
-      shiftId: shift.id, locumId: t.locumId, practiceId: shift.practiceId,
-      hours, rate: shift.hourlyRate, total, status: "Draft",
+      shiftId: shift.id,
+      locumId: t.locumId,
+      practiceId: shift.practiceId,
+      hours,
+      rate: shift.hourlyRate,
+      total,
+      status: "Draft",
     };
     set({ invoices: [...get().invoices, inv] });
   },
   markCompleted: (shiftId) =>
-    set({ shifts: get().shifts.map((s) => (s.id === shiftId ? { ...s, status: "Completed" } : s)) }),
+    set({
+      shifts: get().shifts.map((s) => (s.id === shiftId ? { ...s, status: "Completed" } : s)),
+    }),
 }));
 
 // helpers
-export const calcShiftValue = (s: Pick<Shift, "start" | "end" | "lunchMinutes" | "lunchPaid" | "hourlyRate" | "positionsNeeded">) => {
+export const calcShiftValue = (
+  s: Pick<Shift, "start" | "end" | "lunchMinutes" | "lunchPaid" | "hourlyRate" | "positionsNeeded">,
+) => {
   const [sh, sm] = s.start.split(":").map(Number);
   const [eh, em] = s.end.split(":").map(Number);
   let mins = eh * 60 + em - (sh * 60 + sm);
