@@ -10,7 +10,7 @@ import {
   Mail,
   MapPin,
   MessageCircle,
-  Star,
+  RotateCcw,
   X,
   XCircle,
   type LucideIcon,
@@ -31,6 +31,21 @@ export function ApplicationsModal({ shiftId, onClose }: { shiftId: string; onClo
   const confirmed = apps.filter((a) => a.status === "Booked");
   const others = apps.filter((a) => a.status === "Not selected" || a.status === "Withdrawn");
   const positionsLeft = shift.positionsNeeded - confirmed.length;
+  const undoDecline = (applicationId: string) => {
+    useStore.setState((state) => ({
+      applications: state.applications.map((application) =>
+        application.id === applicationId
+          ? { ...application, status: "Applied", updatedAt: Date.now() }
+          : application,
+      ),
+      shifts: state.shifts.map((item) =>
+        item.id === shift.id && item.status === "Open"
+          ? { ...item, status: "New applicants" }
+          : item,
+      ),
+    }));
+    toast.success("Moved back to New");
+  };
 
   return (
     <>
@@ -88,9 +103,9 @@ export function ApplicationsModal({ shiftId, onClose }: { shiftId: string; onClo
               {news.map((application) => {
                 const locum = locums.find((item) => item.id === application.locumId)!;
                 return (
-                  <div key={application.id} className="rounded-lg border bg-card p-4">
-                    <div className="grid gap-3 sm:grid-cols-[auto_1fr]">
-                      <div className="grid size-10 place-items-center rounded-full bg-amber-50 text-sm font-semibold text-amber-700">
+                  <div key={application.id} className="rounded-lg border bg-card p-3">
+                    <div className="grid gap-3 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center">
+                      <div className="grid size-9 place-items-center rounded-full bg-amber-50 text-sm font-semibold text-amber-700">
                         {initials(locum.displayName)}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -102,60 +117,61 @@ export function ApplicationsModal({ shiftId, onClose }: { shiftId: string; onClo
                           {locum.displayName}
                         </button>
                         <div className="text-xs text-muted-foreground">
-                          {locum.role} - {locum.postcodeArea} - star {locum.rating} -{" "}
-                          {locum.completedShifts} shifts
+                          {locum.role} - star {locum.rating} - {locum.completedShifts} shifts
                         </div>
                         {application.note && (
-                          <p className="mt-2 text-sm italic text-muted-foreground">
+                          <p className="mt-1 text-sm italic text-muted-foreground">
                             "{application.note}"
                           </p>
                         )}
                       </div>
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Button size="sm" variant="outline" asChild>
-                        <a
-                          href={`https://wa.me/${locum.whatsapp.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Hi ${locum.displayName}, thanks for applying for our ${shift.role} shift on ${fmtDate(shift.date)}.`)}`}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          <MessageCircle className="size-4" /> WhatsApp
-                        </a>
-                      </Button>
-                      <Button size="sm" variant="outline" asChild>
-                        <a
-                          href={`mailto:${locum.email}?subject=${encodeURIComponent(`${shift.role} shift on ${fmtDate(shift.date)}`)}`}
-                        >
-                          <Mail className="size-4" /> Email
-                        </a>
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
-                        onClick={() => {
-                          notSelected(application.id);
-                          toast("Marked declined");
-                        }}
-                      >
-                        <X className="size-4" /> Decline
-                      </Button>
-                      {positionsLeft > 0 ? (
+                      <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                        <Button size="sm" variant="outline" asChild>
+                          <a
+                            href={`https://wa.me/${locum.whatsapp.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Hi ${locum.displayName}, thanks for applying for our ${shift.role} shift on ${fmtDate(shift.date)}.`)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            aria-label={`WhatsApp ${locum.displayName}`}
+                          >
+                            <MessageCircle className="size-4" />
+                          </a>
+                        </Button>
+                        <Button size="sm" variant="outline" asChild>
+                          <a
+                            href={`mailto:${locum.email}?subject=${encodeURIComponent(`${shift.role} shift on ${fmtDate(shift.date)}`)}`}
+                            aria-label={`Email ${locum.displayName}`}
+                          >
+                            <Mail className="size-4" />
+                          </a>
+                        </Button>
                         <Button
                           size="sm"
-                          className="ml-auto bg-emerald-600 hover:bg-emerald-700"
+                          variant="outline"
+                          className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
                           onClick={() => {
-                            confirmBooking(application.id);
-                            toast.success("Booking confirmed");
+                            notSelected(application.id);
+                            toast("Marked declined");
                           }}
                         >
-                          <Star className="size-4" /> Confirm booking
+                          <X className="size-4" /> Decline
                         </Button>
-                      ) : (
-                        <span className="ml-auto self-center text-xs text-muted-foreground">
-                          Position filled
-                        </span>
-                      )}
+                        {positionsLeft > 0 ? (
+                          <Button
+                            size="sm"
+                            className="bg-emerald-600 hover:bg-emerald-700"
+                            onClick={() => {
+                              confirmBooking(application.id);
+                              toast.success("Booking confirmed");
+                            }}
+                          >
+                            <CheckCircle2 className="size-4" /> Book
+                          </Button>
+                        ) : (
+                          <span className="self-center text-xs text-muted-foreground">
+                            Position filled
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -215,7 +231,16 @@ export function ApplicationsModal({ shiftId, onClose }: { shiftId: string; onClo
                         {locum.displayName}
                       </button>
                     </div>
-                    <StatusChip status={application.status} />
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => undoDecline(application.id)}
+                      >
+                        <RotateCcw className="size-4" /> Undo
+                      </Button>
+                      <StatusChip status={application.status} />
+                    </div>
                   </div>
                 );
               })}
