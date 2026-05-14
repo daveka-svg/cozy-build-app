@@ -3,7 +3,13 @@ import { addDays, format } from "date-fns";
 
 export type Role = "Vet" | "Nurse" | "Reception";
 export type ShiftStatus = "Open" | "New applicants" | "Booked" | "Completed" | "Cancelled";
-export type AppStatus = "Applied" | "Booked" | "Not selected" | "Withdrawn" | "Cancelled";
+export type AppStatus =
+  | "Applied"
+  | "Requested"
+  | "Booked"
+  | "Not selected"
+  | "Withdrawn"
+  | "Cancelled";
 
 export interface Practice {
   id: string;
