@@ -7,9 +7,9 @@ import {
   Clock,
   Copy,
   ExternalLink,
+  Globe,
   Mail,
   MapPin,
-  MessageCircle,
   PawPrint,
   Phone,
   Send,
@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { RoleChip, StatusChip, fmtDate, fmtGBP } from "@/components/Bits";
+import { RoleChip, fmtDate, fmtGBP } from "@/components/Bits";
 import {
   calcShiftValue,
   type Practice,
@@ -83,7 +83,6 @@ function PublicBookingCalendar() {
   );
   const [role, setRole] = useState<Role | "All">("All");
   const [selectedDate, setSelectedDate] = useState(() => firstOpenDate ?? todayIso);
-  const [selectedShiftId, setSelectedShiftId] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
 
   const visibleFutureShifts = useMemo(() => {
@@ -110,8 +109,7 @@ function PublicBookingCalendar() {
     }
   });
   const selectedDayShifts = publicShifts.filter((shift) => shift.date === selectedDate);
-  const highlightedShift =
-    selectedDayShifts.find((shift) => shift.id === selectedShiftId) ?? selectedDayShifts[0] ?? null;
+  const highlightedShift = selectedDayShifts[0] ?? null;
 
   if (!practice) {
     return (
@@ -162,7 +160,6 @@ function PublicBookingCalendar() {
     `${primaryLocation.name} ${primaryLocation.address} ${primaryLocation.postcode}`,
   );
   const phoneHref = `tel:${practice.whatsapp.replace(/[^+0-9]/g, "")}`;
-  const whatsappHref = `https://wa.me/${practice.whatsapp.replace(/[^0-9]/g, "")}`;
 
   const submitRequest = () => {
     if (!highlightedShift) return;
@@ -226,16 +223,10 @@ function PublicBookingCalendar() {
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {activeSettings.showPracticeWebsite && practice.website && (
-                    <IconLink
-                      href={practice.website}
-                      label="Website"
-                      icon={ExternalLink}
-                      external
-                    />
+                    <IconLink href={practice.website} label="Website" icon={Globe} external />
                   )}
                   <IconLink href={phoneHref} label={practice.whatsapp} icon={Phone} />
                   <IconLink href={`mailto:${practice.email}`} label={practice.email} icon={Mail} />
-                  <IconLink href={whatsappHref} label="WhatsApp" icon={MessageCircle} external />
                 </div>
               </div>
 
@@ -264,7 +255,6 @@ function PublicBookingCalendar() {
                   selected={role === "All"}
                   onClick={() => {
                     setRole("All");
-                    setSelectedShiftId(null);
                   }}
                 >
                   All roles
@@ -275,7 +265,6 @@ function PublicBookingCalendar() {
                     selected={role === item}
                     onClick={() => {
                       setRole(item);
-                      setSelectedShiftId(null);
                     }}
                   >
                     <RoleChip role={item} />
@@ -285,76 +274,13 @@ function PublicBookingCalendar() {
             </div>
           </div>
 
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-            <CalendarPanel
-              cursor={cursor}
-              selectedDate={selectedDate}
-              dateStates={dateStates}
-              onMonthChange={setCursor}
-              onSelectDate={(date) => {
-                setSelectedDate(date);
-                setSelectedShiftId(null);
-              }}
-            />
-
-            <section className="rounded-lg border bg-card">
-              <div className="border-b px-4 py-3">
-                <h2 className="font-semibold">{fmtDate(selectedDate)}</h2>
-                <p className="text-xs text-muted-foreground">
-                  {selectedDayShifts.length} open shift{selectedDayShifts.length === 1 ? "" : "s"}
-                </p>
-              </div>
-              <div className="max-h-[480px] space-y-2 overflow-auto p-3">
-                {selectedDayShifts.length === 0 ? (
-                  <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-                    No matching shifts on this date.
-                  </div>
-                ) : (
-                  selectedDayShifts.map((shift) => {
-                    const loc = practice.locations.find(
-                      (location) => location.id === shift.locationId,
-                    );
-                    const applicantCount = applications.filter(
-                      (application) =>
-                        application.shiftId === shift.id && application.status === "Applied",
-                    ).length;
-                    const isActive = highlightedShift?.id === shift.id;
-                    return (
-                      <button
-                        key={shift.id}
-                        onClick={() => setSelectedShiftId(shift.id)}
-                        className={cn(
-                          "w-full rounded-md border p-3 text-left transition-colors hover:border-primary/50 hover:bg-accent/50",
-                          isActive && "border-primary bg-primary/5",
-                        )}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <RoleChip role={shift.role} />
-                          <span className="text-xs font-medium">
-                            {activeSettings.showRates
-                              ? `${fmtGBP(shift.hourlyRate)}/hr`
-                              : "Rate on request"}
-                          </span>
-                        </div>
-                        <div className="mt-2 text-sm font-medium">
-                          {shift.start}-{shift.end}
-                        </div>
-                        <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                          <MapPin className="size-3" />
-                          {loc?.name}, {loc?.postcode}
-                        </div>
-                        {applicantCount > 0 && (
-                          <div className="mt-2 text-xs text-primary">
-                            {applicantCount} request{applicantCount === 1 ? "" : "s"}
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </section>
-          </div>
+          <CalendarPanel
+            cursor={cursor}
+            selectedDate={selectedDate}
+            dateStates={dateStates}
+            onMonthChange={setCursor}
+            onSelectDate={setSelectedDate}
+          />
         </div>
 
         <aside className="rounded-lg border bg-card p-5 lg:sticky lg:top-6 lg:self-start">
@@ -366,7 +292,6 @@ function PublicBookingCalendar() {
                   <h2 className="mt-3 text-xl font-semibold">{fmtDate(highlightedShift.date)}</h2>
                   <p className="text-sm text-muted-foreground">{highlightedShift.area}</p>
                 </div>
-                <StatusChip status={highlightedShift.status} />
               </div>
 
               <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
@@ -403,8 +328,7 @@ function PublicBookingCalendar() {
               </div>
 
               <div className="mt-5 rounded-md bg-muted/40 p-3 text-sm text-muted-foreground">
-                Registered locums can request in one tap. We share your Every Tail profile,
-                documents, email, and WhatsApp with the practice so you do not need another form.
+                Register and request this shift in one tap.
               </div>
               <Button className="mt-3 w-full" type="button" onClick={submitRequest}>
                 <Send className="size-4" />
@@ -456,10 +380,11 @@ function IconLink({
       href={href}
       target={external ? "_blank" : undefined}
       rel={external ? "noreferrer" : undefined}
-      className="inline-flex h-8 items-center gap-1.5 rounded-md border bg-background px-2.5 text-xs font-medium shadow-sm transition-colors hover:bg-accent"
+      aria-label={label}
+      title={label}
+      className="inline-grid size-8 place-items-center rounded-md border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground"
     >
-      <Icon className="size-3.5" />
-      <span className="max-w-40 truncate">{label}</span>
+      <Icon className="size-4" />
     </a>
   );
 }
