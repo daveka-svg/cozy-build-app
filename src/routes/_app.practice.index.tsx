@@ -3,18 +3,20 @@ import { PageHeader } from "@/components/AppShell";
 import { useStore } from "@/lib/store";
 import { DateBlock, RoleChip, StatusChip, fmtDate } from "@/components/Bits";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, MessageCircle, Mail, FileText, Plus } from "lucide-react";
+import { CalendarDays, MessageCircle, Mail, Plus } from "lucide-react";
 import { useState } from "react";
 import { ApplicationsModal } from "@/components/ApplicationsModal";
+import { LocumProfileModal } from "@/components/LocumProfileModal";
 
 export const Route = createFileRoute("/_app/practice/")({
-  head: () => ({ meta: [{ title: "Practice Dashboard — Every Tail Locums" }] }),
+  head: () => ({ meta: [{ title: "Practice Dashboard - Every Tail Locums" }] }),
   component: PracticeDashboard,
 });
 
 function PracticeDashboard() {
   const { shifts, applications, locums, currentPracticeId, practices } = useStore();
   const [openShiftId, setOpenShiftId] = useState<string | null>(null);
+  const [profileLocumId, setProfileLocumId] = useState<string | null>(null);
   const practice = practices.find((p) => p.id === currentPracticeId)!;
   const myShifts = shifts.filter((s) => s.practiceId === currentPracticeId);
 
@@ -96,14 +98,17 @@ function PracticeDashboard() {
                     <StatusChip status="New applicants" />
                   </div>
                   <div className="mt-1 text-sm">
-                    <span className="font-medium">{l.displayName}</span>
+                    <button
+                      type="button"
+                      onClick={() => setProfileLocumId(l.id)}
+                      className="font-medium underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                    >
+                      {l.displayName}
+                    </button>
                     <span className="text-muted-foreground">
                       {" "}
-                      · ★ {l.rating} · {l.completedShifts} shifts
+                      - star {l.rating} - {l.completedShifts} shifts
                     </span>
-                  </div>
-                  <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                    <FileText className="size-3" /> CV attached
                   </div>
                 </div>
                 <Button size="sm" onClick={() => setOpenShiftId(s.id)}>
@@ -135,10 +140,20 @@ function PracticeDashboard() {
                       <RoleChip role={s.role} />
                     </div>
                     <div className="text-sm mt-1">
-                      <span className="font-medium">{l?.displayName ?? "—"}</span>
+                      {l ? (
+                        <button
+                          type="button"
+                          onClick={() => setProfileLocumId(l.id)}
+                          className="font-medium underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                        >
+                          {l.displayName}
+                        </button>
+                      ) : (
+                        <span className="font-medium">-</span>
+                      )}
                       <span className="text-muted-foreground">
                         {" "}
-                        · {s.start}–{s.end} · {loc?.name}
+                        - {s.start}-{s.end} - {loc?.name}
                       </span>
                     </div>
                     <div className="text-xs text-muted-foreground mt-0.5">{fmtDate(s.date)}</div>
@@ -172,6 +187,9 @@ function PracticeDashboard() {
 
       {openShiftId && (
         <ApplicationsModal shiftId={openShiftId} onClose={() => setOpenShiftId(null)} />
+      )}
+      {profileLocumId && (
+        <LocumProfileModal locumId={profileLocumId} onClose={() => setProfileLocumId(null)} />
       )}
     </div>
   );
