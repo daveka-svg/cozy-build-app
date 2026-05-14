@@ -7,19 +7,16 @@ import {
   Clock,
   Copy,
   ExternalLink,
+  Mail,
   MapPin,
+  MessageCircle,
   PawPrint,
+  Phone,
   Send,
+  type LucideIcon,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { RoleChip, StatusChip, fmtDate, fmtGBP } from "@/components/Bits";
 import {
   calcShiftValue,
@@ -160,6 +157,12 @@ function PublicBookingCalendar() {
   const selectedLocation = highlightedShift
     ? practice.locations.find((location) => location.id === highlightedShift.locationId)
     : undefined;
+  const primaryLocation = selectedLocation ?? practice.locations[0];
+  const mapQuery = encodeURIComponent(
+    `${primaryLocation.name} ${primaryLocation.address} ${primaryLocation.postcode}`,
+  );
+  const phoneHref = `tel:${practice.whatsapp.replace(/[^+0-9]/g, "")}`;
+  const whatsappHref = `https://wa.me/${practice.whatsapp.replace(/[^0-9]/g, "")}`;
 
   const submitRequest = () => {
     if (!highlightedShift) return;
@@ -207,49 +210,78 @@ function PublicBookingCalendar() {
 
       <section className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1.1fr)_390px]">
         <div className="space-y-5">
-          <div className="flex flex-col gap-4 rounded-lg border bg-card p-5 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-md border bg-background px-2.5 py-1 text-xs font-medium text-primary">
-                <CalendarDays className="size-3.5" />
-                Live
+          <div className="rounded-lg border bg-card p-5">
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-md border bg-background px-2.5 py-1 text-xs font-medium text-primary">
+                  <CalendarDays className="size-3.5" />
+                  Live
+                </div>
+                <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
+                  {activeSettings.title || `${practice.tradingName} available locum shifts`}
+                </h1>
+                <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                  {activeSettings.intro ||
+                    "Pick an open date, check the shift details, then request the cover. The practice confirms before anything is booked."}
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {activeSettings.showPracticeWebsite && practice.website && (
+                    <IconLink
+                      href={practice.website}
+                      label="Website"
+                      icon={ExternalLink}
+                      external
+                    />
+                  )}
+                  <IconLink href={phoneHref} label={practice.whatsapp} icon={Phone} />
+                  <IconLink href={`mailto:${practice.email}`} label={practice.email} icon={Mail} />
+                  <IconLink href={whatsappHref} label="WhatsApp" icon={MessageCircle} external />
+                </div>
               </div>
-              <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
-                {activeSettings.title || `${practice.tradingName} available locum shifts`}
-              </h1>
-              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                {activeSettings.intro ||
-                  "Pick an open date, check the shift details, then request the cover. The practice confirms before anything is booked."}
-              </p>
-              {activeSettings.showPracticeWebsite && practice.website && (
-                <Button asChild className="mt-3" size="sm" variant="outline">
-                  <a href={practice.website} target="_blank" rel="noreferrer">
-                    <ExternalLink className="size-4" />
-                    Practice website
-                  </a>
-                </Button>
-              )}
+
+              <div className="overflow-hidden rounded-md border bg-muted/30">
+                <iframe
+                  title={`${practice.tradingName} map`}
+                  src={`https://www.google.com/maps?q=${mapQuery}&output=embed`}
+                  className="h-36 w-full border-0"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+                <div className="flex items-start gap-2 px-3 py-2 text-xs text-muted-foreground">
+                  <MapPin className="mt-0.5 size-3.5 shrink-0" />
+                  <span>
+                    <span className="font-medium text-foreground">{primaryLocation.name}</span>,{" "}
+                    {primaryLocation.postcode}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="min-w-48">
-              <div className="mb-1 text-sm font-medium">Role</div>
-              <Select
-                value={role}
-                onValueChange={(value) => {
-                  setRole(value as Role | "All");
-                  setSelectedShiftId(null);
-                }}
-              >
-                <SelectTrigger className="h-10 bg-background">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All roles</SelectItem>
-                  {visibleRoles.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {item === "Reception" ? "VCA" : item}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+
+            <div className="mt-5">
+              <div className="mb-2 text-sm font-medium">Role</div>
+              <div className="flex flex-wrap gap-2">
+                <RolePickerButton
+                  selected={role === "All"}
+                  onClick={() => {
+                    setRole("All");
+                    setSelectedShiftId(null);
+                  }}
+                >
+                  All roles
+                </RolePickerButton>
+                {visibleRoles.map((item) => (
+                  <RolePickerButton
+                    key={item}
+                    selected={role === item}
+                    onClick={() => {
+                      setRole(item);
+                      setSelectedShiftId(null);
+                    }}
+                  >
+                    <RoleChip role={item} />
+                  </RolePickerButton>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -370,9 +402,9 @@ function PublicBookingCalendar() {
                 )}
               </div>
 
-              <div className="mt-5 text-sm text-muted-foreground">
-                Registered locums only. Your platform profile, documents, email, and WhatsApp will
-                be shared with the practice.
+              <div className="mt-5 rounded-md bg-muted/40 p-3 text-sm text-muted-foreground">
+                Registered locums can request in one tap. We share your Every Tail profile,
+                documents, email, and WhatsApp with the practice so you do not need another form.
               </div>
               <Button className="mt-3 w-full" type="button" onClick={submitRequest}>
                 <Send className="size-4" />
@@ -405,6 +437,53 @@ function PublicBookingCalendar() {
         </aside>
       </section>
     </main>
+  );
+}
+
+function IconLink({
+  href,
+  label,
+  icon: Icon,
+  external,
+}: {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  external?: boolean;
+}) {
+  return (
+    <a
+      href={href}
+      target={external ? "_blank" : undefined}
+      rel={external ? "noreferrer" : undefined}
+      className="inline-flex h-8 items-center gap-1.5 rounded-md border bg-background px-2.5 text-xs font-medium shadow-sm transition-colors hover:bg-accent"
+    >
+      <Icon className="size-3.5" />
+      <span className="max-w-40 truncate">{label}</span>
+    </a>
+  );
+}
+
+function RolePickerButton({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex h-8 items-center rounded-md border bg-background px-2 text-xs font-medium transition-colors hover:bg-accent",
+        selected && "border-primary bg-primary/10 ring-1 ring-primary/30",
+      )}
+    >
+      {children}
+    </button>
   );
 }
 
