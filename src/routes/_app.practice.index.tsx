@@ -79,8 +79,11 @@ function PracticeDashboard() {
           <div className="px-5 py-4 border-b flex items-center justify-between">
             <h2 className="font-semibold">Next applications</h2>
             <div className="flex items-center gap-2">
-              {newApps.length > 0 && <StatusChip status="New applicants" />}
-              <span className="text-xs text-muted-foreground">{newApps.length} waiting</span>
+              {newApps.length > 0 && (
+                <StatusChip
+                  status={`${newApps.length} new applicant${newApps.length === 1 ? "" : "s"}`}
+                />
+              )}
             </div>
           </div>
           <div className="divide-y">

@@ -47,11 +47,16 @@ const statusLabel: Record<string, string> = {
 };
 
 export function StatusChip({ status }: { status: ShiftStatus | AppStatus | string }) {
+  const dynamicStyle =
+    status.includes("new applicant") || status.includes("request")
+      ? statusStyle["New applicants"]
+      : undefined;
+
   return (
     <span
       className={cn(
         "inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium border",
-        statusStyle[status] ?? "bg-muted",
+        statusStyle[status] ?? dynamicStyle ?? "bg-muted",
       )}
     >
       {statusLabel[status] ?? status}

@@ -1,5 +1,4 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { PageHeader } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -85,12 +84,17 @@ function PostShift() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      <PageHeader title="Post shift" description="Form on the left. Live preview on the right." />
-      <div className="grid lg:grid-cols-[1fr_22rem] gap-6">
+      <div className="mb-5">
+        <h1 className="text-2xl font-semibold tracking-tight">Post shift</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Form on the left. Live preview on the right.
+        </p>
+      </div>
+      <div className="grid lg:grid-cols-[1fr_22rem] gap-6 text-sm">
         <div className="space-y-5">
           <Section title="Role">
             <Select value={role} onValueChange={(value) => setRole(value as Role)}>
-              <SelectTrigger className="h-10 bg-background">
+              <SelectTrigger className="h-9 bg-background text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -106,7 +110,7 @@ function PostShift() {
           <Section title="Practice">
             <div className="grid sm:grid-cols-2 gap-3">
               <div>
-                <Label>Practice</Label>
+                <Label className="text-xs font-medium text-muted-foreground">Practice</Label>
                 <Select
                   value={practiceId}
                   onValueChange={(v) => {
@@ -114,7 +118,7 @@ function PostShift() {
                     setLocationId(practices.find((p) => p.id === v)!.locations[0].id);
                   }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -142,36 +146,36 @@ function PostShift() {
                 <div key={i} className="rounded-md border bg-card p-3">
                   <div className="grid grid-cols-12 gap-2 items-end">
                     <div className="col-span-12 sm:col-span-4">
-                      <Label className="text-xs">Date</Label>
+                      <Label className="text-xs font-medium text-muted-foreground">Date</Label>
                       <Input
-                        className="h-9"
+                        className="h-9 text-sm"
                         type="date"
                         value={r.date}
                         onChange={(e) => updateRow(i, { date: e.target.value })}
                       />
                     </div>
                     <div className="col-span-6 sm:col-span-2">
-                      <Label className="text-xs">Start</Label>
+                      <Label className="text-xs font-medium text-muted-foreground">Start</Label>
                       <Input
-                        className="h-9"
+                        className="h-9 text-sm"
                         type="time"
                         value={r.start}
                         onChange={(e) => updateRow(i, { start: e.target.value })}
                       />
                     </div>
                     <div className="col-span-6 sm:col-span-2">
-                      <Label className="text-xs">End</Label>
+                      <Label className="text-xs font-medium text-muted-foreground">End</Label>
                       <Input
-                        className="h-9"
+                        className="h-9 text-sm"
                         type="time"
                         value={r.end}
                         onChange={(e) => updateRow(i, { end: e.target.value })}
                       />
                     </div>
                     <div className="col-span-6 sm:col-span-2">
-                      <Label className="text-xs">Lunch</Label>
+                      <Label className="text-xs font-medium text-muted-foreground">Lunch</Label>
                       <Input
-                        className="h-9"
+                        className="h-9 text-sm"
                         type="number"
                         value={r.lunchMinutes}
                         onChange={(e) => updateRow(i, { lunchMinutes: Number(e.target.value) })}
@@ -216,16 +220,22 @@ function PostShift() {
           <Section title="Pay & details">
             <div className="grid sm:grid-cols-3 gap-3">
               <div>
-                <Label>Hourly rate (GBP)</Label>
+                <Label className="text-xs font-medium text-muted-foreground">
+                  Hourly rate (GBP)
+                </Label>
                 <Input
+                  className="h-9 text-sm"
                   type="number"
                   value={rate}
                   onChange={(e) => setRate(Number(e.target.value))}
                 />
               </div>
               <div>
-                <Label>Positions needed</Label>
+                <Label className="text-xs font-medium text-muted-foreground">
+                  Positions needed
+                </Label>
                 <Input
+                  className="h-9 text-sm"
                   type="number"
                   min={1}
                   value={positions}
@@ -233,9 +243,11 @@ function PostShift() {
                 />
               </div>
               <div>
-                <Label>Area of interest</Label>
+                <Label className="text-xs font-medium text-muted-foreground">
+                  Area of interest
+                </Label>
                 <Select value={area} onValueChange={setArea}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -255,8 +267,9 @@ function PostShift() {
               </div>
             </div>
             <div className="mt-3">
-              <Label>Notes</Label>
+              <Label className="text-xs font-medium text-muted-foreground">Notes</Label>
               <Textarea
+                className="text-sm"
                 rows={3}
                 placeholder="No sole charge. Consults only."
                 value={notes}
@@ -282,7 +295,7 @@ function PostShift() {
                 </div>
                 <div className="text-muted-foreground text-xs">{selectedLocation.name}</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Lunch {r.lunchMinutes}m{r.lunchPaid ? " paid" : ""}
+                  Lunch {r.lunchMinutes}m{r.lunchPaid ? " paid" : ""} - {fmtGBP(rate)}/hr
                 </div>
               </div>
             </div>
