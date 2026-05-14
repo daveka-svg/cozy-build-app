@@ -78,7 +78,10 @@ function PracticeDashboard() {
         <section className="rounded-xl border bg-card">
           <div className="px-5 py-4 border-b flex items-center justify-between">
             <h2 className="font-semibold">Next applications</h2>
-            <span className="text-xs text-muted-foreground">{newApps.length} waiting</span>
+            <div className="flex items-center gap-2">
+              {newApps.length > 0 && <StatusChip status="New applicants" />}
+              <span className="text-xs text-muted-foreground">{newApps.length} waiting</span>
+            </div>
           </div>
           <div className="divide-y">
             {newApps.length === 0 && (
@@ -95,7 +98,6 @@ function PracticeDashboard() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <RoleChip role={s.role} />
-                    <StatusChip status="New applicants" />
                   </div>
                   <div className="mt-1 text-sm">
                     <button

@@ -89,21 +89,18 @@ function PostShift() {
       <div className="grid lg:grid-cols-[1fr_22rem] gap-6">
         <div className="space-y-5">
           <Section title="Role">
-            <div className="grid grid-cols-3 gap-2">
-              {(["Vet", "Nurse", "Reception"] as Role[]).map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setRole(r)}
-                  className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
-                    role === r
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-card hover:bg-accent"
-                  }`}
-                >
-                  {r === "Reception" ? "VCA" : r}
-                </button>
-              ))}
-            </div>
+            <Select value={role} onValueChange={(value) => setRole(value as Role)}>
+              <SelectTrigger className="h-10 bg-background">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(["Vet", "Nurse", "Reception"] as Role[]).map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {item === "Reception" ? "VCA" : item}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Section>
 
           <Section title="Practice">
@@ -129,10 +126,11 @@ function PostShift() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>Location</Label>
-                <div className="min-h-10 rounded-md border bg-muted/40 px-3 py-2 text-sm">
-                  {selectedLocation.name} - {selectedLocation.postcode}
+              <div className="flex items-end">
+                <div className="min-h-10 w-full rounded-md border bg-muted/30 px-3 py-2 text-sm">
+                  <span className="text-muted-foreground">Location:</span>{" "}
+                  <span className="font-medium">{selectedLocation.name}</span>{" "}
+                  <span className="text-muted-foreground">- {selectedLocation.postcode}</span>
                 </div>
               </div>
             </div>
@@ -141,62 +139,66 @@ function PostShift() {
           <Section title="Dates & times">
             <div className="space-y-3">
               {rows.map((r, i) => (
-                <div
-                  key={i}
-                  className="grid grid-cols-12 gap-2 items-end rounded-md border p-3 bg-card"
-                >
-                  <div className="col-span-12 sm:col-span-3">
-                    <Label>Date</Label>
-                    <Input
-                      type="date"
-                      value={r.date}
-                      onChange={(e) => updateRow(i, { date: e.target.value })}
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-2">
-                    <Label>Start</Label>
-                    <Input
-                      type="time"
-                      value={r.start}
-                      onChange={(e) => updateRow(i, { start: e.target.value })}
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-2">
-                    <Label>End</Label>
-                    <Input
-                      type="time"
-                      value={r.end}
-                      onChange={(e) => updateRow(i, { end: e.target.value })}
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-2">
-                    <Label>Lunch (min)</Label>
-                    <Input
-                      type="number"
-                      value={r.lunchMinutes}
-                      onChange={(e) => updateRow(i, { lunchMinutes: Number(e.target.value) })}
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-2 flex items-center gap-2 pb-2">
-                    <Checkbox
-                      id={`lp-${i}`}
-                      checked={r.lunchPaid}
-                      onCheckedChange={(v) => updateRow(i, { lunchPaid: !!v })}
-                    />
-                    <label htmlFor={`lp-${i}`} className="text-xs">
-                      Lunch paid
-                    </label>
-                  </div>
-                  <div className="col-span-12 sm:col-span-1 flex justify-end">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      disabled={rows.length === 1}
-                      onClick={() => setRows(rows.filter((_, idx) => idx !== i))}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
+                <div key={i} className="rounded-md border bg-card p-3">
+                  <div className="grid grid-cols-12 gap-2 items-end">
+                    <div className="col-span-12 sm:col-span-4">
+                      <Label className="text-xs">Date</Label>
+                      <Input
+                        className="h-9"
+                        type="date"
+                        value={r.date}
+                        onChange={(e) => updateRow(i, { date: e.target.value })}
+                      />
+                    </div>
+                    <div className="col-span-6 sm:col-span-2">
+                      <Label className="text-xs">Start</Label>
+                      <Input
+                        className="h-9"
+                        type="time"
+                        value={r.start}
+                        onChange={(e) => updateRow(i, { start: e.target.value })}
+                      />
+                    </div>
+                    <div className="col-span-6 sm:col-span-2">
+                      <Label className="text-xs">End</Label>
+                      <Input
+                        className="h-9"
+                        type="time"
+                        value={r.end}
+                        onChange={(e) => updateRow(i, { end: e.target.value })}
+                      />
+                    </div>
+                    <div className="col-span-6 sm:col-span-2">
+                      <Label className="text-xs">Lunch</Label>
+                      <Input
+                        className="h-9"
+                        type="number"
+                        value={r.lunchMinutes}
+                        onChange={(e) => updateRow(i, { lunchMinutes: Number(e.target.value) })}
+                      />
+                    </div>
+                    <div className="col-span-6 sm:col-span-1 flex items-center gap-2 pb-2">
+                      <Checkbox
+                        id={`lp-${i}`}
+                        className="size-5"
+                        checked={r.lunchPaid}
+                        onCheckedChange={(v) => updateRow(i, { lunchPaid: !!v })}
+                      />
+                      <label htmlFor={`lp-${i}`} className="text-xs leading-tight">
+                        Paid
+                      </label>
+                    </div>
+                    <div className="col-span-12 sm:col-span-1 flex justify-end pb-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        disabled={rows.length === 1}
+                        onClick={() => setRows(rows.filter((_, idx) => idx !== i))}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -276,13 +278,12 @@ function PostShift() {
                   <RoleChip role={role} />
                 </div>
                 <div className="mt-1">
-                  {r.start}-{r.end} - lunch {r.lunchMinutes}m {r.lunchPaid ? "(paid)" : ""}
+                  {r.start}-{r.end} - {fmtGBP(r.total)} total
                 </div>
                 <div className="text-muted-foreground text-xs">{selectedLocation.name}</div>
-                <div className="text-xs mt-1">
-                  {positions} pos - {fmtGBP(rate)}/hr
+                <div className="text-xs text-muted-foreground mt-1">
+                  Lunch {r.lunchMinutes}m{r.lunchPaid ? " paid" : ""}
                 </div>
-                <div className="text-xs font-semibold mt-1">Total: {fmtGBP(r.total)}</div>
               </div>
             </div>
           ))}

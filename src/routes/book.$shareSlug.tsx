@@ -13,6 +13,13 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { RoleChip, StatusChip, fmtDate, fmtGBP } from "@/components/Bits";
 import {
   calcShiftValue,
@@ -222,28 +229,27 @@ function PublicBookingCalendar() {
                 </Button>
               )}
             </div>
-            <div className="min-w-40">
+            <div className="min-w-48">
               <div className="mb-1 text-sm font-medium">Role</div>
-              <div className="flex flex-wrap gap-2">
-                {(["All", ...visibleRoles] as (Role | "All")[]).map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => {
-                      setRole(item);
-                      setSelectedShiftId(null);
-                    }}
-                    className={cn(
-                      "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
-                      role === item
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "bg-background text-muted-foreground hover:bg-accent",
-                    )}
-                  >
-                    {item === "All" ? "All roles" : item === "Reception" ? "VCA" : item}
-                  </button>
-                ))}
-              </div>
+              <Select
+                value={role}
+                onValueChange={(value) => {
+                  setRole(value as Role | "All");
+                  setSelectedShiftId(null);
+                }}
+              >
+                <SelectTrigger className="h-10 bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All roles</SelectItem>
+                  {visibleRoles.map((item) => (
+                    <SelectItem key={item} value={item}>
+                      {item === "Reception" ? "VCA" : item}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -364,9 +370,9 @@ function PublicBookingCalendar() {
                 )}
               </div>
 
-              <div className="mt-5 rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
-                Requests are only available to registered locums. We will send your platform
-                profile, documents, email, and WhatsApp details to the practice.
+              <div className="mt-5 text-sm text-muted-foreground">
+                Registered locums only. Your platform profile, documents, email, and WhatsApp will
+                be shared with the practice.
               </div>
               <Button className="mt-3 w-full" type="button" onClick={submitRequest}>
                 <Send className="size-4" />

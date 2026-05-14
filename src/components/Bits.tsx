@@ -27,7 +27,7 @@ export function RoleChip({ role }: { role: Role }) {
 }
 
 const statusStyle: Record<string, string> = {
-  Open: "bg-blue-50 text-blue-800 border border-blue-200",
+  Open: "bg-emerald-50 text-emerald-800 border border-emerald-200",
   "New applicants": "bg-amber-50 text-amber-800 border border-amber-200",
   Booked: "bg-emerald-50 text-emerald-800 border border-emerald-200",
   Completed: "bg-violet-50 text-violet-800 border border-violet-200",
