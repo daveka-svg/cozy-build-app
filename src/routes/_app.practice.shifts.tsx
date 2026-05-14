@@ -14,6 +14,7 @@ import { DateBlock, RoleChip, StatusChip, fmtGBP, fmtDate } from "@/components/B
 import { useMemo, useState } from "react";
 import { ApplicationsModal } from "@/components/ApplicationsModal";
 import { LocumProfileModal } from "@/components/LocumProfileModal";
+import { LocumIdentity } from "@/components/LocumIdentity";
 import { MessageCircle, Mail, MapPin, Users, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -188,16 +189,14 @@ function ShiftList({
                     <MapPin className="size-3" /> {loc.name}, {loc.postcode}
                   </div>
                   {bookedLocum && (
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onProfile(bookedLocum.id);
-                      }}
-                      className="mt-1 text-xs font-medium underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
-                    >
-                      {bookedLocum.displayName}
-                    </button>
+                    <div className="mt-2" onClick={(event) => event.stopPropagation()}>
+                      <LocumIdentity
+                        locum={bookedLocum}
+                        onProfile={onProfile}
+                        compact
+                        showRole={false}
+                      />
+                    </div>
                   )}
                   {s.notes && (
                     <div className="text-xs text-muted-foreground mt-1 italic">"{s.notes}"</div>
@@ -214,7 +213,7 @@ function ShiftList({
                   {(s.status === "Open" || s.status === "New applicants") && (
                     <>
                       <Button size="sm" onClick={() => onOpen(s.id)}>
-                        Applications
+                        Review
                       </Button>
                       {cancel && (
                         <Button

@@ -7,6 +7,7 @@ import { CalendarDays, MessageCircle, Mail, Plus } from "lucide-react";
 import { useState } from "react";
 import { ApplicationsModal } from "@/components/ApplicationsModal";
 import { LocumProfileModal } from "@/components/LocumProfileModal";
+import { LocumIdentity } from "@/components/LocumIdentity";
 
 export const Route = createFileRoute("/_app/practice/")({
   head: () => ({ meta: [{ title: "Practice Dashboard - Every Tail Locums" }] }),
@@ -99,22 +100,11 @@ function PracticeDashboard() {
               <div key={a.id} className="p-4 flex items-center gap-4">
                 <DateBlock date={s.date} />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <RoleChip role={s.role} />
-                  </div>
-                  <div className="mt-1 text-sm">
-                    <button
-                      type="button"
-                      onClick={() => setProfileLocumId(l.id)}
-                      className="font-medium underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
-                    >
-                      {l.displayName}
-                    </button>
-                    <span className="text-muted-foreground">
-                      {" "}
-                      - star {l.rating} - {l.completedShifts} shifts
-                    </span>
-                  </div>
+                  <LocumIdentity
+                    locum={l}
+                    status={a.status === "Applied" ? "New" : a.status}
+                    onProfile={setProfileLocumId}
+                  />
                 </div>
                 <Button size="sm" onClick={() => setOpenShiftId(s.id)}>
                   Review
@@ -144,24 +134,21 @@ function PracticeDashboard() {
                     <div className="flex items-center gap-2">
                       <RoleChip role={s.role} />
                     </div>
-                    <div className="text-sm mt-1">
+                    <div className="mt-2">
                       {l ? (
-                        <button
-                          type="button"
-                          onClick={() => setProfileLocumId(l.id)}
-                          className="font-medium underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
-                        >
-                          {l.displayName}
-                        </button>
+                        <LocumIdentity
+                          locum={l}
+                          onProfile={setProfileLocumId}
+                          compact
+                          showRole={false}
+                        />
                       ) : (
                         <span className="font-medium">-</span>
                       )}
-                      <span className="text-muted-foreground">
-                        {" "}
-                        - {s.start}-{s.end} - {loc?.name}
-                      </span>
                     </div>
-                    <div className="text-xs text-muted-foreground mt-0.5">{fmtDate(s.date)}</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {s.start}-{s.end} - {loc?.name} - {fmtDate(s.date)}
+                    </div>
                   </div>
                   {l && (
                     <div className="flex gap-1.5">

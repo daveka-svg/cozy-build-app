@@ -40,12 +40,25 @@ const statusStyle: Record<string, string> = {
   Withdrawn: "bg-stone-100 text-stone-700 border border-stone-200",
   Sent: "bg-amber-50 text-amber-800 border border-amber-200",
   Accepted: "bg-emerald-50 text-emerald-800 border border-emerald-200",
+  Submitted: "bg-blue-50 text-blue-800 border border-blue-200",
+  Approved: "bg-emerald-50 text-emerald-800 border border-emerald-200",
+  Queried: "bg-amber-50 text-amber-800 border border-amber-200",
   Issued: "bg-blue-50 text-blue-800 border border-blue-200",
   Draft: "bg-stone-100 text-stone-700 border border-stone-200",
+  "Paid outside platform": "bg-emerald-50 text-emerald-800 border border-emerald-200",
+  Available: "bg-emerald-50 text-emerald-800 border border-emerald-200",
+  Tentative: "bg-amber-50 text-amber-800 border border-amber-200",
+  Busy: "bg-red-50 text-red-700 border border-red-200",
+  "Public profile live": "bg-emerald-50 text-emerald-800 border border-emerald-200",
+  "Private profile": "bg-stone-100 text-stone-700 border border-stone-200",
+  "Not connected": "bg-stone-100 text-stone-700 border border-stone-200",
+  verified: "bg-emerald-50 text-emerald-800 border border-emerald-200",
+  missing: "bg-red-50 text-red-700 border border-red-200",
 };
 
 const statusLabel: Record<string, string> = {
   "Not selected": "Declined",
+  "Paid outside platform": "Paid",
 };
 
 export function StatusChip({ status }: { status: ShiftStatus | AppStatus | string }) {

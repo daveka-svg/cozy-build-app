@@ -9,7 +9,6 @@ import {
   CircleAlert,
   Clock3,
   MapPin,
-  MessageCircle,
   RotateCcw,
   X,
   XCircle,
@@ -17,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { LocumProfileModal } from "./LocumProfileModal";
+import { LocumContactLinks, LocumIdentity } from "./LocumIdentity";
 
 export function ApplicationsModal({ shiftId, onClose }: { shiftId: string; onClose: () => void }) {
   const { shifts, practices, locums, applications, confirmBooking, notSelected } = useStore();
@@ -216,47 +216,18 @@ function ApplicationRow({
   onProfile: (locumId: string) => void;
   actions?: React.ReactNode;
 }) {
-  const whatsappHref = `https://wa.me/${locum.whatsapp.replace(/[^0-9]/g, "")}`;
-
   return (
     <div className="rounded-lg border bg-card px-3 py-2.5">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <div className="flex min-w-[13rem] items-center gap-3">
-          <div className="grid size-9 place-items-center rounded-full bg-amber-50 text-sm font-semibold text-amber-700">
-            {initials(locum.displayName)}
-          </div>
-          <div className="min-w-0">
-            <button
-              type="button"
-              onClick={() => onProfile(locum.id)}
-              className="rounded-sm text-left font-medium underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {locum.displayName}
-            </button>
-            <div className="mt-1 flex flex-wrap items-center gap-1.5">
-              <RoleChip role={locum.role} />
-              <StatusChip status={status} />
-            </div>
-          </div>
-        </div>
+        <LocumIdentity
+          locum={locum}
+          status={status}
+          onProfile={onProfile}
+          className="min-w-[13rem]"
+        />
 
         <div className="min-w-[12rem] flex-1">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-            <a
-              href={whatsappHref}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 text-emerald-700 underline-offset-4 hover:underline"
-            >
-              <MessageCircle className="size-3.5" /> {locum.whatsapp}
-            </a>
-            <a
-              href={`mailto:${locum.email}`}
-              className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-            >
-              {locum.email}
-            </a>
-          </div>
+          <LocumContactLinks locum={locum} />
           {application.note && (
             <p className="mt-1 truncate text-xs italic text-muted-foreground">
               "{application.note}"
@@ -290,12 +261,4 @@ function TabLabel({
       {label} ({count})
     </span>
   );
-}
-
-function initials(name: string) {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2);
 }

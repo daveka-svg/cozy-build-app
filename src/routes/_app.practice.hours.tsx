@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/AppShell";
 import {
   useStore,
-  type Attachment,
   type Invoice,
   type Locum,
   type Practice,
@@ -10,6 +9,8 @@ import {
   type Timesheet,
 } from "@/lib/store";
 import { DateBlock, RoleChip, StatusChip, fmtDate, fmtGBP } from "@/components/Bits";
+import { LocumContactLinks, LocumIdentity } from "@/components/LocumIdentity";
+import { LocumProfileModal } from "@/components/LocumProfileModal";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,13 +18,12 @@ import {
   Check,
   Clock,
   Download,
-  FileText,
   MessageCircle,
   ReceiptText,
   Users,
   WalletCards,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/practice/hours")({
@@ -40,7 +40,6 @@ type HoursItem = {
   practice: Practice;
   location: PracticeLocation;
   invoice?: Invoice;
-  evidence: Attachment[];
 };
 
 function calcTimesheetHours(
@@ -74,8 +73,8 @@ function HoursPage() {
     markInvoicePaid,
     updateLocumProfile,
     invoices,
-    attachments,
   } = useStore();
+  const [profileLocumId, setProfileLocumId] = useState<string | null>(null);
 
   const my: HoursItem[] = timesheets
     .flatMap((timesheet) => {
@@ -93,10 +92,6 @@ function HoursPage() {
           practice,
           location,
           invoice: invoices.find((invoice) => invoice.timesheetId === timesheet.id),
-          evidence: attachments.filter(
-            (attachment) =>
-              attachment.ownerType === "timesheet" && attachment.ownerId === timesheet.id,
-          ),
         },
       ];
     })
@@ -127,158 +122,154 @@ function HoursPage() {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <PageHeader
-        title="Hours"
-        description="Review submitted timesheets, approve worked hours, export invoice checks, and keep internal locum notes."
-      />
+    <>
+      <div className="p-6 max-w-6xl mx-auto">
+        <PageHeader
+          title="Hours"
+          description="Review submitted timesheets, approve worked hours, export invoice checks, and keep internal locum notes."
+        />
 
-      <div className="grid gap-3 md:grid-cols-4">
-        <MetricCard
-          icon={<Clock className="size-4" />}
-          label="Submitted"
-          value={String(submitted.length)}
-        />
-        <MetricCard
-          icon={<Check className="size-4" />}
-          label="Approved"
-          value={totalHours.toFixed(1)}
-        />
-        <MetricCard
-          icon={<WalletCards className="size-4" />}
-          label="Approved value"
-          value={fmtGBP(approvedValue)}
-        />
-        <MetricCard
-          icon={<ReceiptText className="size-4" />}
-          label="Paid internally"
-          value={String(paidCount)}
-        />
+        <div className="grid gap-3 md:grid-cols-4">
+          <MetricCard
+            icon={<Clock className="size-4" />}
+            label="Submitted"
+            value={String(submitted.length)}
+          />
+          <MetricCard
+            icon={<Check className="size-4" />}
+            label="Approved"
+            value={totalHours.toFixed(1)}
+          />
+          <MetricCard
+            icon={<WalletCards className="size-4" />}
+            label="Approved value"
+            value={fmtGBP(approvedValue)}
+          />
+          <MetricCard
+            icon={<ReceiptText className="size-4" />}
+            label="Paid internally"
+            value={String(paidCount)}
+          />
+        </div>
+
+        <Tabs defaultValue="submitted" className="mt-5">
+          <TabsList className="flex h-auto flex-wrap justify-start">
+            <TabsTrigger value="submitted">Submitted</TabsTrigger>
+            <TabsTrigger value="approved">Approved</TabsTrigger>
+            <TabsTrigger value="all">All hours</TabsTrigger>
+            <TabsTrigger value="locums">Locum database</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="submitted" className="mt-4">
+            <HoursList
+              empty="No submitted timesheets yet."
+              items={submitted}
+              onApprove={approve}
+              onCreateDraft={createDraft}
+              onIssueInvoice={(invoiceId) => {
+                issueInvoice(invoiceId);
+                toast.success("Invoice issued");
+              }}
+              onMarkPaid={(invoiceId) => {
+                markInvoicePaid(invoiceId);
+                toast.success("Marked paid internally");
+              }}
+              onProfile={setProfileLocumId}
+            />
+          </TabsContent>
+
+          <TabsContent value="approved" className="mt-4">
+            <div className="mb-3 flex justify-end">
+              <Button size="sm" variant="outline" onClick={() => downloadInvoiceCheck(approved)}>
+                <Download className="size-4" />
+                Export invoice check
+              </Button>
+            </div>
+            <HoursList
+              empty="No approved timesheets yet."
+              items={approved}
+              onApprove={approve}
+              onCreateDraft={createDraft}
+              onIssueInvoice={(invoiceId) => {
+                issueInvoice(invoiceId);
+                toast.success("Invoice issued");
+              }}
+              onMarkPaid={(invoiceId) => {
+                markInvoicePaid(invoiceId);
+                toast.success("Marked paid internally");
+              }}
+              onProfile={setProfileLocumId}
+            />
+          </TabsContent>
+
+          <TabsContent value="all" className="mt-4">
+            <HoursList
+              empty="No timesheets yet."
+              items={my}
+              onApprove={approve}
+              onCreateDraft={createDraft}
+              onIssueInvoice={(invoiceId) => {
+                issueInvoice(invoiceId);
+                toast.success("Invoice issued");
+              }}
+              onMarkPaid={(invoiceId) => {
+                markInvoicePaid(invoiceId);
+                toast.success("Marked paid internally");
+              }}
+              onProfile={setProfileLocumId}
+            />
+          </TabsContent>
+
+          <TabsContent value="locums" className="mt-4">
+            <section className="rounded-lg border bg-card">
+              <div className="border-b px-4 py-3">
+                <h2 className="flex items-center gap-2 font-semibold">
+                  <Users className="size-4" />
+                  Locums worked with
+                </h2>
+              </div>
+              <div className="divide-y">
+                {workedWith.map((locum) => {
+                  const rows = my.filter((item) => item.locum.id === locum.id);
+                  const hours = rows.reduce(
+                    (sum, item) => sum + calcTimesheetHours(item.timesheet, item.shift),
+                    0,
+                  );
+                  return (
+                    <div key={locum.id} className="grid gap-3 p-4 lg:grid-cols-[1fr_20rem]">
+                      <div>
+                        <LocumIdentity locum={locum} onProfile={setProfileLocumId} />
+                        <div className="text-xs text-muted-foreground">
+                          {rows.length} shift{rows.length === 1 ? "" : "s"} - {hours.toFixed(1)}{" "}
+                          hours reviewed
+                        </div>
+                        <LocumContactLinks locum={locum} className="mt-2" />
+                      </div>
+                      <div>
+                        <div className="mb-1 text-xs font-medium text-muted-foreground">
+                          Internal note
+                        </div>
+                        <Textarea
+                          rows={3}
+                          defaultValue={locum.internalNote ?? ""}
+                          placeholder="Private notes about reliability, preferences, or rebooking."
+                          onBlur={(event) =>
+                            updateLocumProfile(locum.id, { internalNote: event.target.value })
+                          }
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          </TabsContent>
+        </Tabs>
       </div>
-
-      <Tabs defaultValue="submitted" className="mt-5">
-        <TabsList className="flex h-auto flex-wrap justify-start">
-          <TabsTrigger value="submitted">Submitted</TabsTrigger>
-          <TabsTrigger value="approved">Approved</TabsTrigger>
-          <TabsTrigger value="all">All hours</TabsTrigger>
-          <TabsTrigger value="locums">Locum database</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="submitted" className="mt-4">
-          <HoursList
-            empty="No submitted timesheets yet."
-            items={submitted}
-            onApprove={approve}
-            onCreateDraft={createDraft}
-            onIssueInvoice={(invoiceId) => {
-              issueInvoice(invoiceId);
-              toast.success("Invoice issued");
-            }}
-            onMarkPaid={(invoiceId) => {
-              markInvoicePaid(invoiceId);
-              toast.success("Marked paid internally");
-            }}
-          />
-        </TabsContent>
-
-        <TabsContent value="approved" className="mt-4">
-          <div className="mb-3 flex justify-end">
-            <Button size="sm" variant="outline" onClick={() => downloadInvoiceCheck(approved)}>
-              <Download className="size-4" />
-              Export invoice check
-            </Button>
-          </div>
-          <HoursList
-            empty="No approved timesheets yet."
-            items={approved}
-            onApprove={approve}
-            onCreateDraft={createDraft}
-            onIssueInvoice={(invoiceId) => {
-              issueInvoice(invoiceId);
-              toast.success("Invoice issued");
-            }}
-            onMarkPaid={(invoiceId) => {
-              markInvoicePaid(invoiceId);
-              toast.success("Marked paid internally");
-            }}
-          />
-        </TabsContent>
-
-        <TabsContent value="all" className="mt-4">
-          <HoursList
-            empty="No timesheets yet."
-            items={my}
-            onApprove={approve}
-            onCreateDraft={createDraft}
-            onIssueInvoice={(invoiceId) => {
-              issueInvoice(invoiceId);
-              toast.success("Invoice issued");
-            }}
-            onMarkPaid={(invoiceId) => {
-              markInvoicePaid(invoiceId);
-              toast.success("Marked paid internally");
-            }}
-          />
-        </TabsContent>
-
-        <TabsContent value="locums" className="mt-4">
-          <section className="rounded-lg border bg-card">
-            <div className="border-b px-4 py-3">
-              <h2 className="flex items-center gap-2 font-semibold">
-                <Users className="size-4" />
-                Locums worked with
-              </h2>
-            </div>
-            <div className="divide-y">
-              {workedWith.map((locum) => {
-                const rows = my.filter((item) => item.locum.id === locum.id);
-                const hours = rows.reduce(
-                  (sum, item) => sum + calcTimesheetHours(item.timesheet, item.shift),
-                  0,
-                );
-                return (
-                  <div key={locum.id} className="grid gap-3 p-4 lg:grid-cols-[1fr_20rem]">
-                    <div>
-                      <div className="font-medium">{locum.displayName}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {rows.length} shift{rows.length === 1 ? "" : "s"} - {hours.toFixed(1)} hours
-                        reviewed
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                        <a className="text-primary hover:underline" href={`mailto:${locum.email}`}>
-                          {locum.email}
-                        </a>
-                        <a
-                          className="text-primary hover:underline"
-                          href={`https://wa.me/${locum.whatsapp.replace(/[^0-9]/g, "")}`}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          {locum.whatsapp}
-                        </a>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="mb-1 text-xs font-medium text-muted-foreground">
-                        Internal note
-                      </div>
-                      <Textarea
-                        rows={3}
-                        defaultValue={locum.internalNote ?? ""}
-                        placeholder="Private notes about reliability, preferences, or rebooking."
-                        onBlur={(event) =>
-                          updateLocumProfile(locum.id, { internalNote: event.target.value })
-                        }
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        </TabsContent>
-      </Tabs>
-    </div>
+      {profileLocumId && (
+        <LocumProfileModal locumId={profileLocumId} onClose={() => setProfileLocumId(null)} />
+      )}
+    </>
   );
 }
 
@@ -301,6 +292,7 @@ function HoursList({
   onCreateDraft,
   onIssueInvoice,
   onMarkPaid,
+  onProfile,
 }: {
   empty: string;
   items: HoursItem[];
@@ -308,6 +300,7 @@ function HoursList({
   onCreateDraft: (timesheetId: string) => void;
   onIssueInvoice: (invoiceId: string) => void;
   onMarkPaid: (invoiceId: string) => void;
+  onProfile: (locumId: string) => void;
 }) {
   if (items.length === 0) {
     return (
@@ -327,6 +320,7 @@ function HoursList({
           onCreateDraft={onCreateDraft}
           onIssueInvoice={onIssueInvoice}
           onMarkPaid={onMarkPaid}
+          onProfile={onProfile}
         />
       ))}
     </div>
@@ -339,20 +333,22 @@ function HoursCard({
   onCreateDraft,
   onIssueInvoice,
   onMarkPaid,
+  onProfile,
 }: {
   item: HoursItem;
   onApprove: (timesheetId: string) => void;
   onCreateDraft: (timesheetId: string) => void;
   onIssueInvoice: (invoiceId: string) => void;
   onMarkPaid: (invoiceId: string) => void;
+  onProfile: (locumId: string) => void;
 }) {
-  const { timesheet, shift, locum, location, invoice, evidence } = item;
+  const { timesheet, shift, locum, location, invoice } = item;
   const hours = calcTimesheetHours(timesheet, shift);
   const total = calcTimesheetValue(timesheet, shift);
 
   return (
     <div className="rounded-lg border bg-card p-4">
-      <div className="grid gap-4 lg:grid-cols-[auto_1fr_auto] lg:items-start">
+      <div className="grid gap-4 lg:grid-cols-[auto_minmax(0,1fr)_12rem] lg:items-center">
         <DateBlock date={shift.date} />
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -360,24 +356,37 @@ function HoursCard({
             <StatusChip status={timesheet.status} />
             {invoice && <StatusChip status={invoice.status} />}
           </div>
-          <div className="mt-1 font-medium">{locum.displayName}</div>
-          <div className="text-xs text-muted-foreground">
-            {location.name} - {fmtDate(shift.date)}
+          <LocumIdentity
+            locum={locum}
+            onProfile={onProfile}
+            compact
+            showRole={false}
+            className="mt-2"
+          />
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            <span>{location.name}</span>
+            <span>{fmtDate(shift.date)}</span>
+            <span>
+              {timesheet.actualStart}-{timesheet.actualEnd}
+            </span>
+            <span>Lunch {timesheet.lunchMinutes}m</span>
           </div>
         </div>
-        <div className="text-sm lg:text-right">
-          <div className="font-semibold">{fmtGBP(total)}</div>
+        <div className="rounded-md border border-emerald-200 bg-emerald-50/70 p-3 text-sm lg:text-right">
+          <div className="text-[11px] font-medium uppercase tracking-wide text-emerald-800">
+            Total
+          </div>
+          <div className="mt-1 text-2xl font-semibold">{fmtGBP(total)}</div>
           <div className="text-xs text-muted-foreground">
-            {hours.toFixed(2)}h at {fmtGBP(shift.hourlyRate)}/hr
+            {hours.toFixed(2)}h x {fmtGBP(shift.hourlyRate)}/hr
           </div>
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-4">
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
         <Fact label="Started" value={timesheet.actualStart} />
         <Fact label="Finished" value={timesheet.actualEnd} />
         <Fact label="Lunch break" value={`${timesheet.lunchMinutes} min`} />
-        <Fact label="Evidence" value={evidence.length ? `${evidence.length} file` : "No proof"} />
       </div>
 
       {(timesheet.expense || timesheet.notes) && (
@@ -427,8 +436,6 @@ function HoursCard({
           </a>
         </Button>
       </div>
-
-      <EvidenceList attachments={evidence} />
     </div>
   );
 }
@@ -439,43 +446,6 @@ function Fact({ label, value }: { label: string; value: string }) {
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-1 text-sm font-medium">{value}</div>
     </div>
-  );
-}
-
-function EvidenceList({ attachments }: { attachments: Attachment[] }) {
-  return (
-    <section className="mt-3 rounded-lg border bg-card p-4">
-      <div className="flex items-center gap-2 font-medium">
-        <FileText className="size-4 text-primary" />
-        Timesheet proof
-      </div>
-      <div className="mt-3 space-y-2">
-        {attachments.length === 0 ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            No proof attached.
-          </div>
-        ) : (
-          attachments.map((attachment) => (
-            <div
-              key={attachment.id}
-              className="flex items-center justify-between gap-3 rounded-md border p-2 text-sm"
-            >
-              <div className="min-w-0">
-                <div className="truncate font-medium">{attachment.name}</div>
-                <div className="text-xs text-muted-foreground">{attachment.kind}</div>
-              </div>
-              {attachment.url && (
-                <Button size="sm" variant="outline" asChild>
-                  <a href={attachment.url} target="_blank" rel="noreferrer">
-                    Open
-                  </a>
-                </Button>
-              )}
-            </div>
-          ))
-        )}
-      </div>
-    </section>
   );
 }
 
