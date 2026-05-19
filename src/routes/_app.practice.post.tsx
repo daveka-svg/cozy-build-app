@@ -95,7 +95,7 @@ function PostShift() {
               <div>
                 <Label className="text-xs font-medium text-muted-foreground">Practice</Label>
                 <select
-                  className="h-9 w-full rounded-md border bg-card px-3 text-sm"
+                  className="h-9 w-full rounded-md border bg-white px-3 text-sm"
                   value={practiceId}
                   onChange={(event) => {
                     setPracticeId(event.target.value);
@@ -112,7 +112,7 @@ function PostShift() {
                 </select>
               </div>
               <div className="flex items-end">
-                <div className="min-h-10 w-full rounded-md border bg-muted/30 px-3 py-2 text-sm">
+                <div className="min-h-10 w-full rounded-md border bg-white px-3 py-2 text-sm">
                   <span className="text-muted-foreground">Location</span>{" "}
                   <span className="font-medium">{selectedLocation.name}</span>{" "}
                   <span className="text-muted-foreground">- {selectedLocation.postcode}</span>
@@ -126,7 +126,7 @@ function PostShift() {
               {rows.map((r, i) => (
                 <div key={i} className="rounded-md border bg-card p-3">
                   <div className="grid grid-cols-12 gap-2 items-end">
-                    <div className="col-span-12 sm:col-span-4">
+                    <div className="col-span-12 sm:col-span-3">
                       <Label className="text-xs font-medium text-muted-foreground">Date</Label>
                       <Input
                         className="h-9 text-sm"
@@ -162,14 +162,17 @@ function PostShift() {
                         onChange={(e) => updateRow(i, { lunchMinutes: Number(e.target.value) })}
                       />
                     </div>
-                    <div className="col-span-6 sm:col-span-1 flex items-center gap-2 pb-2">
-                      <Checkbox
-                        id={`lp-${i}`}
-                        className="size-5"
-                        checked={r.lunchPaid}
-                        onCheckedChange={(v) => updateRow(i, { lunchPaid: !!v })}
-                      />
-                      <label htmlFor={`lp-${i}`} className="text-xs leading-tight">
+                    <div className="col-span-6 flex items-end sm:col-span-2">
+                      <label
+                        htmlFor={`lp-${i}`}
+                        className="flex h-10 w-full items-center gap-2 rounded-md border bg-white px-3 text-sm font-medium"
+                      >
+                        <Checkbox
+                          id={`lp-${i}`}
+                          className="size-5 border-primary"
+                          checked={r.lunchPaid}
+                          onCheckedChange={(v) => updateRow(i, { lunchPaid: !!v })}
+                        />
                         Paid
                       </label>
                     </div>
@@ -191,6 +194,7 @@ function PostShift() {
                 type="button"
                 variant="outline"
                 size="sm"
+                className="bg-white"
                 onClick={() => setRows([...rows, { ...rows[rows.length - 1], date: today }])}
               >
                 <Plus className="size-4" /> Add date
@@ -212,7 +216,7 @@ function PostShift() {
               <div>
                 <Label className="text-xs font-medium text-muted-foreground">Area</Label>
                 <select
-                  className="h-9 w-full rounded-md border bg-card px-3 text-sm"
+                  className="h-9 w-full rounded-md border bg-white px-3 text-sm"
                   value={area}
                   onChange={(event) => setArea(event.target.value)}
                 >
@@ -229,7 +233,7 @@ function PostShift() {
             <div className="mt-3">
               <Label className="text-xs font-medium text-muted-foreground">Notes</Label>
               <Textarea
-                className="text-sm"
+                className="bg-white text-sm"
                 rows={3}
                 placeholder="No sole charge. Consults only."
                 value={notes}

@@ -15,6 +15,9 @@ import { cn } from "@/lib/utils";
 
 type PracticeLocation = Practice["locations"][number];
 
+const shouldShowStatusChip = (status: string) =>
+  !["Open", "open", "Shift", "shift"].includes(status);
+
 export type PipelineTab = {
   value: string;
   label: string;
@@ -61,7 +64,7 @@ export function PlacementHeader({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <RoleChip role={shift.role} />
-            <StatusChip status={shift.status} />
+            {shouldShowStatusChip(shift.status) && <StatusChip status={shift.status} />}
           </div>
           <h2 className="mt-3 text-3xl font-semibold leading-tight">{fmtDate(shift.date)}</h2>
           <div className="mt-1 text-sm text-muted-foreground">
@@ -329,7 +332,7 @@ export function ShiftCard({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <RoleChip role={role} />
-            <StatusChip status={status} />
+            {shouldShowStatusChip(status) && <StatusChip status={status} />}
           </div>
           <div className="mt-1 font-semibold">{title}</div>
           {meta && <div className="mt-1 text-xs text-muted-foreground">{meta}</div>}

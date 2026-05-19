@@ -296,10 +296,9 @@ export function TagMultiSelect({
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="flex min-h-10 w-full items-center justify-between gap-2 rounded-md border bg-card px-3 py-2 text-left text-sm transition-colors hover:bg-accent/40"
+            className="flex min-h-10 w-full items-center justify-between gap-2 rounded-md border bg-white px-3 py-2 text-left text-sm transition-colors hover:bg-accent/40"
           >
             <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-              <span className="text-xs text-muted-foreground">Multi-select</span>
               {selectedRoles.length === 0 ? (
                 <span className="text-muted-foreground">{emptyLabel}</span>
               ) : (
