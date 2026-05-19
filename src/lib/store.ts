@@ -21,6 +21,8 @@ export interface Practice {
   email: string;
   whatsapp: string;
   profileUrl?: string;
+  logoUrl?: string;
+  coverUrl?: string;
   locations: {
     id: string;
     name: string;
@@ -342,6 +344,8 @@ const seedPractices: Practice[] = [
     email: "manager@riversidevets.example.com",
     whatsapp: "+447700900111",
     profileUrl: "https://riversidevets.example.com/about",
+    coverUrl:
+      "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&w=1600&q=80",
     locations: [
       {
         id: "l1",
@@ -375,6 +379,8 @@ const seedPractices: Practice[] = [
     website: "https://oakfield.example.com",
     email: "ops@oakfield.example.com",
     whatsapp: "+447700900222",
+    coverUrl:
+      "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&w=1600&q=80",
     locations: [
       {
         id: "l3",
@@ -905,6 +911,7 @@ interface State {
     practiceId: string,
     patch: Partial<Practice["locations"][number]>,
   ) => void;
+  updatePracticeProfile: (practiceId: string, patch: Partial<Practice>) => void;
   updatePracticePublicLink: (practiceId: string, patch: Partial<PublicLinkSettings>) => void;
   updateLocumPublicProfile: (locumId: string, patch: Partial<LocumPublicProfileSettings>) => void;
   addLocumAvailability: (input: Omit<LocumAvailabilityWindow, "id">) => LocumAvailabilityWindow;
@@ -989,6 +996,12 @@ export const useStore = create<State>((set, get) => ({
               ),
             }
           : practice,
+      ),
+    }),
+  updatePracticeProfile: (practiceId, patch) =>
+    set({
+      practices: get().practices.map((practice) =>
+        practice.id === practiceId ? { ...practice, ...patch } : practice,
       ),
     }),
   updatePracticePublicLink: (practiceId, patch) =>

@@ -206,17 +206,34 @@ function PublicBookingCalendar() {
 
       <section className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1.1fr)_390px]">
         <div className="space-y-5">
-          <div className="rounded-lg border bg-card p-5">
-            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-md border bg-background px-2.5 py-1 text-xs font-medium text-primary">
-                  <CalendarDays className="size-3.5" />
-                  Live
+          <div className="overflow-hidden rounded-lg border bg-card">
+            <div
+              className="h-32 bg-muted bg-cover bg-center sm:h-40"
+              style={
+                practice.coverUrl ? { backgroundImage: `url(${practice.coverUrl})` } : undefined
+              }
+            />
+            <div className="px-5 pb-5">
+              <div className="-mt-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div className="flex min-w-0 items-end gap-3">
+                  <PracticeAvatar practice={practice} />
+                  <div className="min-w-0 pb-1">
+                    <div className="inline-flex items-center gap-2 rounded-md border bg-background px-2.5 py-1 text-xs font-medium text-primary">
+                      <CalendarDays className="size-3.5" />
+                      Live
+                    </div>
+                    <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+                      {activeSettings.title || `${practice.tradingName} available locum shifts`}
+                    </h1>
+                    <div className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <MapPin className="size-3.5" />
+                      <span>
+                        {primaryLocation.name}, {primaryLocation.postcode}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
-                  {activeSettings.title || `${practice.tradingName} available locum shifts`}
-                </h1>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 lg:pb-2">
                   {activeSettings.showPracticeWebsite && practice.website && (
                     <IconLink href={practice.website} label="Website" icon={Globe} external />
                   )}
@@ -225,39 +242,39 @@ function PublicBookingCalendar() {
                 </div>
               </div>
 
-              <div className="overflow-hidden rounded-md border bg-muted/30">
-                <iframe
-                  title={`${practice.tradingName} map`}
-                  src={mapSrc}
-                  className="h-36 w-full border-0"
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
-                <div className="flex items-start gap-2 px-3 py-2 text-xs text-muted-foreground">
-                  <MapPin className="mt-0.5 size-3.5 shrink-0" />
-                  <span>
-                    <span className="font-medium text-foreground">{primaryLocation.name}</span>,{" "}
-                    {primaryLocation.postcode}
-                  </span>
+              <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+                <div className="overflow-hidden rounded-md border bg-muted/30">
+                  <iframe
+                    title={`${practice.tradingName} map`}
+                    src={mapSrc}
+                    className="h-36 w-full border-0"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                  <div className="flex items-start gap-2 px-3 py-2 text-xs text-muted-foreground">
+                    <MapPin className="mt-0.5 size-3.5 shrink-0" />
+                    <span>
+                      <span className="font-medium text-foreground">{primaryLocation.name}</span>,{" "}
+                      {primaryLocation.postcode}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            <div className="mt-5">
-              <TagMultiSelect
-                label="Role"
-                roles={visibleRoles}
-                selectedRoles={selectedRoles}
-                onToggle={(item) =>
-                  setSelectedRoles((current) =>
-                    current.includes(item)
-                      ? current.filter((roleItem) => roleItem !== item)
-                      : [...current, item],
-                  )
-                }
-                onClear={() => setSelectedRoles([])}
-                emptyLabel="All roles"
-              />
+                <TagMultiSelect
+                  label="Role"
+                  roles={visibleRoles}
+                  selectedRoles={selectedRoles}
+                  onToggle={(item) =>
+                    setSelectedRoles((current) =>
+                      current.includes(item)
+                        ? current.filter((roleItem) => roleItem !== item)
+                        : [...current, item],
+                    )
+                  }
+                  onClear={() => setSelectedRoles([])}
+                  emptyLabel="All roles"
+                />
+              </div>
             </div>
           </div>
 
@@ -369,6 +386,29 @@ function IconLink({
     >
       <Icon className="size-4" />
     </a>
+  );
+}
+
+function PracticeAvatar({ practice }: { practice: Practice }) {
+  const initials = practice.tradingName
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  return (
+    <div className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-full border-4 border-card bg-primary text-xl font-semibold text-primary-foreground shadow-none">
+      {practice.logoUrl ? (
+        <img
+          src={practice.logoUrl}
+          alt={`${practice.tradingName} logo`}
+          className="size-full object-cover"
+        />
+      ) : (
+        initials
+      )}
+    </div>
   );
 }
 
