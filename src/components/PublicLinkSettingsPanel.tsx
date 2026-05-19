@@ -5,10 +5,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import type { Practice, PublicLinkSettings, Role } from "@/lib/store";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { roleLabel } from "@/components/Bits";
 
 const roles: Role[] = ["Vet", "Nurse", "Reception"];
 
@@ -17,8 +17,7 @@ function fallbackSettings(practice: Practice): PublicLinkSettings {
     enabled: true,
     slug: practice.shareSlug,
     title: `${practice.tradingName} locum booking calendar`,
-    intro:
-      "Choose an open shift and request cover. The practice reviews every request before confirming.",
+    intro: "Choose a shift and request cover.",
     visibleRoles: roles,
     showRates: true,
     showPracticeWebsite: true,
@@ -70,9 +69,6 @@ export function PublicLinkSettingsPanel({ practice }: { practice: Practice }) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="text-sm font-semibold">Public booking link</div>
-          <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
-            Customise the live calendar that locums and staff see before requesting shifts.
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <Switch
@@ -114,40 +110,16 @@ export function PublicLinkSettingsPanel({ practice }: { practice: Practice }) {
             </div>
           </div>
 
-          <div>
-            <Label htmlFor={`${practice.id}-booking-intro`}>Intro copy</Label>
-            <Textarea
-              id={`${practice.id}-booking-intro`}
-              value={settings.intro ?? ""}
-              onChange={(event) => update({ intro: event.target.value })}
-              placeholder="Tell locums what kind of cover you need and how requests are reviewed."
-            />
-          </div>
-
           <div className="grid gap-3 sm:grid-cols-2">
             <SettingToggle
               label="Show rates"
-              description="Display hourly and estimated total values on public shifts."
               checked={settings.showRates}
               onCheckedChange={(showRates) => update({ showRates })}
             />
             <SettingToggle
               label="Show website"
-              description="Add a public practice website link to the booking page."
               checked={settings.showPracticeWebsite}
               onCheckedChange={(showPracticeWebsite) => update({ showPracticeWebsite })}
-            />
-            <SettingToggle
-              label="Require phone"
-              description="Ask applicants for WhatsApp or a direct phone number."
-              checked={settings.requirePhone}
-              onCheckedChange={(requirePhone) => update({ requirePhone })}
-            />
-            <SettingToggle
-              label="Require CV link"
-              description="Add a required CV/profile URL field to public requests."
-              checked={settings.requireCvLink}
-              onCheckedChange={(requireCvLink) => update({ requireCvLink })}
             />
           </div>
 
@@ -163,7 +135,7 @@ export function PublicLinkSettingsPanel({ practice }: { practice: Practice }) {
                     ).includes(role)}
                     onCheckedChange={(checked) => toggleRole(role, checked === true)}
                   />
-                  {role}
+                  {roleLabel[role]}
                 </label>
               ))}
             </div>
@@ -185,9 +157,6 @@ export function PublicLinkSettingsPanel({ practice }: { practice: Practice }) {
               </a>
             </Button>
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Pausing keeps the settings but hides the public booking page from new applicants.
-          </p>
         </aside>
       </div>
     </section>
@@ -196,12 +165,10 @@ export function PublicLinkSettingsPanel({ practice }: { practice: Practice }) {
 
 function SettingToggle({
   label,
-  description,
   checked,
   onCheckedChange,
 }: {
   label: string;
-  description: string;
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
 }) {
@@ -210,7 +177,6 @@ function SettingToggle({
       <Switch checked={checked} onCheckedChange={onCheckedChange} aria-label={label} />
       <span>
         <span className="block text-sm font-medium">{label}</span>
-        <span className="mt-1 block text-xs text-muted-foreground">{description}</span>
       </span>
     </label>
   );

@@ -15,13 +15,10 @@ function PracticesPage() {
   const { practices, updatePracticeLocation } = useStore();
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <PageHeader
-        title="Practice profile"
-        description="Identity, main location, trust links, and public booking page settings shown to locums."
-      />
+      <PageHeader title="Practice" />
       <div className="space-y-4">
         {practices.map((practice) => (
-          <div key={practice.id} className="rounded-xl border bg-card p-5">
+          <div key={practice.id} className="rounded-lg border bg-card p-5">
             <div className="flex items-center gap-3">
               <div className="size-10 rounded-md bg-primary/15 grid place-items-center text-primary">
                 <Building2 className="size-5" />

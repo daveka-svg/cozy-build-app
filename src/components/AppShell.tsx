@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 const practiceNav = [
   { to: "/practice", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { to: "/practice/post", label: "Post Shift", icon: PlusCircle },
+  { to: "/practice/post", label: "Post", icon: PlusCircle },
   { to: "/practice/shifts", label: "Shifts", icon: Calendar },
   { to: "/practice/hours", label: "Hours", icon: Clock },
   { to: "/practice/practices", label: "Practice", icon: Building2 },
@@ -24,8 +24,8 @@ const practiceNav = [
 
 const locumNav = [
   { to: "/locum", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { to: "/locum/find", label: "Find Shifts", icon: Search },
-  { to: "/locum/bookings", label: "Bookings", icon: BookOpen },
+  { to: "/locum/find", label: "Find", icon: Search },
+  { to: "/locum/bookings", label: "Work", icon: BookOpen },
   { to: "/locum/profile", label: "Profile", icon: User },
 ];
 

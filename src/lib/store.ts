@@ -129,6 +129,48 @@ export interface Invoice {
   pdfAttachmentId?: string;
 }
 
+export type BookingStatus = "confirmed" | "completed" | "cancelled";
+
+export interface Booking {
+  id: string;
+  shiftId: string;
+  practiceId: string;
+  locumId: string;
+  locationId: string;
+  applicationId?: string;
+  bookingRequestId?: string;
+  status: BookingStatus;
+  date: string;
+  start: string;
+  end: string;
+  lunchMinutes: number;
+  lunchPaid: boolean;
+  hourlyRate: number;
+  confirmedAt: number;
+  completedAt?: number;
+  cancelledAt?: number;
+  cancelReason?: string;
+}
+
+const ACTIVE_APPLICATION_STATUSES: AppStatus[] = ["Applied", "Requested"];
+
+function canRequestShift(status: ShiftStatus) {
+  return status === "Open" || status === "New applicants";
+}
+
+function recalculateShiftStatus(shift: Shift, applications: Application[]): ShiftStatus {
+  if (shift.status === "Cancelled" || shift.status === "Completed") return shift.status;
+  const bookedCount = applications.filter(
+    (application) => application.shiftId === shift.id && application.status === "Booked",
+  ).length;
+  if (bookedCount >= shift.positionsNeeded) return "Booked";
+  const hasRequests = applications.some(
+    (application) =>
+      application.shiftId === shift.id && ACTIVE_APPLICATION_STATUSES.includes(application.status),
+  );
+  return hasRequests ? "New applicants" : "Open";
+}
+
 export type ViewerRole = "practice" | "locum";
 export type AttachmentOwnerType =
   | "practice"
@@ -328,7 +370,7 @@ const seedPractices: Practice[] = [
     publicLink: publicPracticeLink(
       "oakfield-animal-hospital",
       "Oakfield Animal Hospital cover calendar",
-      "Browse open reception, nurse, and vet cover dates, then send your details to our team.",
+      "Browse VCA, nurse, and vet shifts.",
     ),
     website: "https://oakfield.example.com",
     email: "ops@oakfield.example.com",
@@ -493,7 +535,7 @@ const seedLocums: Locum[] = [
     legalName: "Maya Patel",
     photoUrl:
       "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=320&q=80",
-    publicHeadline: "Reception cover for busy front desks, payments, phones, and client handover.",
+    publicHeadline: "VCA cover for busy front desks, payments, phones, and client handover.",
     role: "Reception",
     postcodeArea: "BS1",
     rating: 4.8,
@@ -742,6 +784,31 @@ const seedInvoices: Invoice[] = [
   },
 ];
 
+const seedBookings: Booking[] = seedApplications.flatMap((application) => {
+  if (application.status !== "Booked") return [];
+  const shift = seedShifts.find((item) => item.id === application.shiftId);
+  if (!shift) return [];
+  return [
+    {
+      id: `b-${application.id}`,
+      shiftId: shift.id,
+      practiceId: shift.practiceId,
+      locumId: application.locumId,
+      locationId: shift.locationId,
+      applicationId: application.id,
+      status: shift.status === "Completed" ? "completed" : "confirmed",
+      date: shift.date,
+      start: shift.start,
+      end: shift.end,
+      lunchMinutes: shift.lunchMinutes,
+      lunchPaid: shift.lunchPaid,
+      hourlyRate: shift.hourlyRate,
+      confirmedAt: application.updatedAt ?? application.createdAt,
+      completedAt: shift.status === "Completed" ? Date.now() - 2 * 86400000 : undefined,
+    },
+  ];
+});
+
 const seedAttachments: Attachment[] = [
   {
     id: "att-cv-u1",
@@ -821,6 +888,7 @@ interface State {
   locums: Locum[];
   shifts: Shift[];
   applications: Application[];
+  bookings: Booking[];
   timesheets: Timesheet[];
   invoices: Invoice[];
   attachments: Attachment[];
@@ -844,6 +912,7 @@ interface State {
   addShift: (s: Omit<Shift, "id" | "createdAt" | "status">) => Shift;
   cancelShift: (id: string, reason?: string, note?: string) => void;
   apply: (shiftId: string, locumId: string, note?: string) => void;
+  applyToShift: (shiftId: string, locumId: string, note?: string) => void;
   requestPublicShift: (request: PublicShiftRequest) => { ok: boolean; message: string };
   applyAsRegistered: (
     shiftId: string,
@@ -853,7 +922,11 @@ interface State {
   ) => void;
   withdraw: (appId: string, reason?: string, note?: string) => void;
   confirmBooking: (appId: string) => void;
+  confirmApplication: (appId: string) => void;
   notSelected: (appId: string) => void;
+  declineApplication: (appId: string) => void;
+  undoDecline: (appId: string) => void;
+  counterOffer: (appId: string, note?: string) => void;
   sendBookingRequest: (
     input: Omit<BookingRequest, "id" | "status" | "createdAt">,
   ) => BookingRequest;
@@ -862,9 +935,13 @@ interface State {
     status: "Accepted" | "Declined",
     reason?: string,
   ) => void;
+  acceptBookingRequest: (requestId: string) => void;
+  declineBookingRequest: (requestId: string, reason?: string) => void;
   cancelBookingRequest: (requestId: string, reason: string, note?: string) => void;
+  cancelBooking: (bookingId: string, reason?: string, note?: string) => void;
   submitTimesheet: (t: Omit<Timesheet, "id" | "status"> & { attachmentIds?: string[] }) => void;
   approveTimesheet: (id: string) => void;
+  queryTimesheet: (id: string) => void;
   createInvoiceDraft: (timesheetId: string) => void;
   createInvoiceDraftFromTimesheet: (timesheetId: string) => Invoice | undefined;
   issueInvoice: (invoiceId: string) => void;
@@ -872,6 +949,7 @@ interface State {
   connectGoogleCalendarPlaceholder: (ownerType: "practice" | "locum", ownerId: string) => void;
   syncCalendarPlaceholder: (ownerType: "practice" | "locum", ownerId: string) => void;
   markCompleted: (shiftId: string) => void;
+  markShiftCompleted: (shiftId: string) => void;
 }
 
 export const useStore = create<State>((set, get) => ({
@@ -882,6 +960,7 @@ export const useStore = create<State>((set, get) => ({
   locums: seedLocums,
   shifts: seedShifts,
   applications: seedApplications,
+  bookings: seedBookings,
   timesheets: seedTimesheets,
   invoices: seedInvoices,
   attachments: seedAttachments,
@@ -963,7 +1042,8 @@ export const useStore = create<State>((set, get) => ({
     set({
       shifts: get().shifts.map((s) => (s.id === id ? { ...s, status: "Cancelled" } : s)),
       applications: get().applications.map((a) =>
-        a.shiftId === id && (a.status === "Applied" || a.status === "Booked")
+        a.shiftId === id &&
+        (ACTIVE_APPLICATION_STATUSES.includes(a.status) || a.status === "Booked")
           ? { ...a, status: "Cancelled", updatedAt: Date.now() }
           : a,
       ),
@@ -982,11 +1062,15 @@ export const useStore = create<State>((set, get) => ({
       ],
     }),
   apply: (shiftId, locumId, note) => {
-    const existing = get().applications.some(
+    const state = get();
+    const shift = state.shifts.find((item) => item.id === shiftId);
+    const locum = state.locums.find((item) => item.id === locumId);
+    if (!shift || !locum || !canRequestShift(shift.status)) return;
+    const existing = state.applications.some(
       (a) =>
         a.shiftId === shiftId &&
         a.locumId === locumId &&
-        (a.status === "Applied" || a.status === "Booked"),
+        (ACTIVE_APPLICATION_STATUSES.includes(a.status) || a.status === "Booked"),
     );
     if (existing) return;
     const a: Application = {
@@ -998,14 +1082,15 @@ export const useStore = create<State>((set, get) => ({
       applicantKind: "registered",
       createdAt: Date.now(),
     };
-    const shifts = get().shifts.map(
+    const shifts = state.shifts.map(
       (s): Shift =>
         s.id === shiftId && s.status === "Open"
           ? { ...s, status: "New applicants" as ShiftStatus }
           : s,
     );
-    set({ applications: [...get().applications, a], shifts });
+    set({ applications: [...state.applications, a], shifts });
   },
+  applyToShift: (shiftId, locumId, note) => get().apply(shiftId, locumId, note),
   requestPublicShift: (request) => {
     const state = get();
     const displayName = request.displayName.trim();
@@ -1024,7 +1109,7 @@ export const useStore = create<State>((set, get) => ({
     if (!practice || !shift) {
       return { ok: false, message: "This booking link is no longer available." };
     }
-    if (shift.date < todayIso || (shift.status !== "Open" && shift.status !== "New applicants")) {
+    if (shift.date < todayIso || !canRequestShift(shift.status)) {
       return { ok: false, message: "That shift is not open for requests anymore." };
     }
     if (shift.role !== request.role) {
@@ -1032,24 +1117,16 @@ export const useStore = create<State>((set, get) => ({
     }
 
     const existingLocum = state.locums.find((l) => l.email.toLowerCase() === normalizedEmail);
-    const guestApplicant: GuestApplicant | undefined = existingLocum
-      ? undefined
-      : {
-          id: `g${Date.now()}`,
-          displayName,
-          email: normalizedEmail,
-          whatsapp,
-          role: request.role,
-          cvUrl: request.cvUrl,
-          createdAt: Date.now(),
-        };
-    const applicantLocumId = existingLocum?.id ?? `guest-${guestApplicant!.id}`;
+    if (!existingLocum) {
+      return { ok: false, message: "Register as a locum before requesting this shift." };
+    }
+    const applicantLocumId = existingLocum.id;
 
     const alreadyRequested = state.applications.some(
       (a) =>
         a.shiftId === shift.id &&
-        (a.locumId === applicantLocumId || a.guestApplicantId === guestApplicant?.id) &&
-        (a.status === "Applied" || a.status === "Booked"),
+        a.locumId === applicantLocumId &&
+        (ACTIVE_APPLICATION_STATUSES.includes(a.status) || a.status === "Booked"),
     );
     if (alreadyRequested) {
       return { ok: false, message: "You already requested this shift." };
@@ -1060,17 +1137,13 @@ export const useStore = create<State>((set, get) => ({
       shiftId: shift.id,
       locumId: applicantLocumId,
       status: "Applied",
-      applicantKind: existingLocum ? "registered" : "guest",
-      guestApplicantId: guestApplicant?.id,
+      applicantKind: "registered",
       note,
       customAnswers: request.customAnswers,
       createdAt: Date.now(),
     };
 
     set({
-      guestApplicants: guestApplicant
-        ? [guestApplicant, ...state.guestApplicants]
-        : state.guestApplicants,
       applications: [...state.applications, application],
       shifts: state.shifts.map((s) =>
         s.id === shift.id && s.status === "Open" ? { ...s, status: "New applicants" } : s,
@@ -1094,10 +1167,19 @@ export const useStore = create<State>((set, get) => ({
       }
     }
   },
-  withdraw: (appId, reason = "Locum unavailable", note) =>
+  withdraw: (appId, reason = "Locum unavailable", note) => {
+    const state = get();
+    const app = state.applications.find((a) => a.id === appId);
+    if (!app || !ACTIVE_APPLICATION_STATUSES.includes(app.status)) return;
+    const applications = state.applications.map((a) =>
+      a.id === appId ? { ...a, status: "Withdrawn" as AppStatus, updatedAt: Date.now() } : a,
+    );
     set({
-      applications: get().applications.map((a) =>
-        a.id === appId ? { ...a, status: "Withdrawn", updatedAt: Date.now() } : a,
+      applications,
+      shifts: state.shifts.map((shift) =>
+        shift.id === app.shiftId
+          ? { ...shift, status: recalculateShiftStatus(shift, applications) }
+          : shift,
       ),
       cancellations: [
         {
@@ -1110,22 +1192,30 @@ export const useStore = create<State>((set, get) => ({
           cancelledById: get().currentLocumId,
           createdAt: Date.now(),
         },
-        ...get().cancellations,
+        ...state.cancellations,
       ],
-    }),
+    });
+  },
   confirmBooking: (appId) => {
-    const apps = get().applications;
+    const state = get();
+    const apps = state.applications;
     const app = apps.find((a) => a.id === appId);
-    if (!app) return;
-    const shift = get().shifts.find((s) => s.id === app.shiftId);
-    if (!shift) return;
-    const confirmedCount =
-      apps.filter((a) => a.shiftId === shift.id && a.status === "Booked").length + 1;
+    if (!app || !ACTIVE_APPLICATION_STATUSES.includes(app.status)) return;
+    const shift = state.shifts.find((s) => s.id === app.shiftId);
+    if (!shift || !canRequestShift(shift.status)) return;
+    const activeBookings = state.bookings.filter(
+      (booking) => booking.shiftId === shift.id && booking.status !== "cancelled",
+    );
+    const sameLocumAlreadyBooked = activeBookings.some(
+      (booking) => booking.locumId === app.locumId,
+    );
+    if (sameLocumAlreadyBooked || activeBookings.length >= shift.positionsNeeded) return;
+    const confirmedCount = activeBookings.length + 1;
     const newApps = apps.map((a) => {
       if (a.id === appId) return { ...a, status: "Booked" as AppStatus };
       if (
         a.shiftId === shift.id &&
-        a.status === "Applied" &&
+        ACTIVE_APPLICATION_STATUSES.includes(a.status) &&
         confirmedCount >= shift.positionsNeeded
       ) {
         return { ...a, status: "Not selected" as AppStatus };
@@ -1137,12 +1227,85 @@ export const useStore = create<State>((set, get) => ({
         ? { ...s, status: "Booked" as ShiftStatus }
         : s,
     );
-    set({ applications: newApps, shifts: newShifts });
-  },
-  notSelected: (appId) =>
+    const existingBooking = state.bookings.some(
+      (booking) =>
+        booking.applicationId === app.id ||
+        (booking.shiftId === shift.id &&
+          booking.locumId === app.locumId &&
+          booking.status !== "cancelled"),
+    );
+    const booking: Booking = {
+      id: `b${Date.now()}`,
+      shiftId: shift.id,
+      practiceId: shift.practiceId,
+      locumId: app.locumId,
+      locationId: shift.locationId,
+      applicationId: app.id,
+      status: "confirmed",
+      date: shift.date,
+      start: shift.start,
+      end: shift.end,
+      lunchMinutes: shift.lunchMinutes,
+      lunchPaid: shift.lunchPaid,
+      hourlyRate: shift.hourlyRate,
+      confirmedAt: Date.now(),
+    };
     set({
-      applications: get().applications.map((a) =>
-        a.id === appId ? { ...a, status: "Not selected", updatedAt: Date.now() } : a,
+      applications: newApps,
+      shifts: newShifts,
+      bookings: existingBooking ? state.bookings : [booking, ...state.bookings],
+    });
+  },
+  confirmApplication: (appId) => get().confirmBooking(appId),
+  notSelected: (appId) => {
+    const state = get();
+    const app = state.applications.find((application) => application.id === appId);
+    if (!app || !ACTIVE_APPLICATION_STATUSES.includes(app.status)) return;
+    const applications = state.applications.map((application) =>
+      application.id === appId
+        ? { ...application, status: "Not selected" as AppStatus, updatedAt: Date.now() }
+        : application,
+    );
+    set({
+      applications,
+      shifts: state.shifts.map((shift) =>
+        shift.id === app.shiftId
+          ? { ...shift, status: recalculateShiftStatus(shift, applications) }
+          : shift,
+      ),
+    });
+  },
+  declineApplication: (appId) => get().notSelected(appId),
+  undoDecline: (appId) => {
+    const state = get();
+    const app = state.applications.find((application) => application.id === appId);
+    const shift = app ? state.shifts.find((item) => item.id === app.shiftId) : undefined;
+    if (!app || app.status !== "Not selected" || !shift || !canRequestShift(shift.status)) return;
+    const applications = state.applications.map((application) =>
+      application.id === appId
+        ? { ...application, status: "Applied" as AppStatus, updatedAt: Date.now() }
+        : application,
+    );
+    set({
+      applications,
+      shifts: state.shifts.map((item) =>
+        item.id === shift.id
+          ? { ...item, status: recalculateShiftStatus(item, applications) }
+          : item,
+      ),
+    });
+  },
+  counterOffer: (appId, note) =>
+    set({
+      applications: get().applications.map((application) =>
+        application.id === appId
+          ? {
+              ...application,
+              status: "Requested",
+              internalNote: note ?? application.internalNote,
+              updatedAt: Date.now(),
+            }
+          : application,
       ),
     }),
   sendBookingRequest: (input) => {
@@ -1168,6 +1331,86 @@ export const useStore = create<State>((set, get) => ({
           : request,
       ),
     }),
+  acceptBookingRequest: (requestId) => {
+    const state = get();
+    const request = state.bookingRequests.find((item) => item.id === requestId);
+    if (!request || request.status !== "Sent") return;
+    let shift = request.shiftId
+      ? state.shifts.find((item) => item.id === request.shiftId)
+      : undefined;
+    if (shift) {
+      const activeBookings = state.bookings.filter(
+        (booking) => booking.shiftId === shift!.id && booking.status !== "cancelled",
+      );
+      if (
+        !canRequestShift(shift.status) ||
+        activeBookings.length >= shift.positionsNeeded ||
+        activeBookings.some((booking) => booking.locumId === request.locumId)
+      ) {
+        return;
+      }
+    }
+    const now = Date.now();
+    if (!shift) {
+      shift = {
+        id: `s${now}`,
+        practiceId: request.practiceId,
+        locationId: request.locationId,
+        role: request.role,
+        date: request.date,
+        start: request.start,
+        end: request.end,
+        lunchMinutes: 30,
+        lunchPaid: false,
+        hourlyRate: request.hourlyRate,
+        positionsNeeded: 1,
+        area: "Shift",
+        notes: request.message ?? "",
+        status: "Booked",
+        createdAt: now,
+      };
+      set({ shifts: [shift, ...state.shifts] });
+    }
+    const application: Application = {
+      id: `a${now}`,
+      shiftId: shift.id,
+      locumId: request.locumId,
+      status: "Booked",
+      applicantKind: "registered",
+      note: request.message,
+      createdAt: request.createdAt,
+      updatedAt: now,
+    };
+    const booking: Booking = {
+      id: `b${now}`,
+      shiftId: shift.id,
+      practiceId: request.practiceId,
+      locumId: request.locumId,
+      locationId: request.locationId,
+      bookingRequestId: request.id,
+      applicationId: application.id,
+      status: "confirmed",
+      date: request.date,
+      start: request.start,
+      end: request.end,
+      lunchMinutes: shift.lunchMinutes,
+      lunchPaid: shift.lunchPaid,
+      hourlyRate: request.hourlyRate,
+      confirmedAt: now,
+    };
+    set({
+      bookingRequests: get().bookingRequests.map((item) =>
+        item.id === request.id ? { ...item, status: "Accepted", respondedAt: now } : item,
+      ),
+      applications: [application, ...get().applications],
+      bookings: [booking, ...get().bookings],
+      shifts: get().shifts.map((item) =>
+        item.id === shift!.id ? { ...item, status: "Booked" } : item,
+      ),
+    });
+  },
+  declineBookingRequest: (requestId, reason) =>
+    get().respondToBookingRequest(requestId, "Declined", reason),
   cancelBookingRequest: (requestId, reason, note) =>
     set({
       bookingRequests: get().bookingRequests.map((request) =>
@@ -1189,20 +1432,71 @@ export const useStore = create<State>((set, get) => ({
         ...get().cancellations,
       ],
     }),
+  cancelBooking: (bookingId, reason = "Cancelled", note) => {
+    const booking = get().bookings.find((item) => item.id === bookingId);
+    if (!booking) return;
+    set({
+      bookings: get().bookings.map((item) =>
+        item.id === bookingId
+          ? { ...item, status: "cancelled", cancelledAt: Date.now(), cancelReason: reason }
+          : item,
+      ),
+      applications: get().applications.map((application) =>
+        application.id === booking.applicationId
+          ? { ...application, status: "Cancelled", updatedAt: Date.now() }
+          : application,
+      ),
+      shifts: get().shifts.map((shift) =>
+        shift.id === booking.shiftId ? { ...shift, status: "Cancelled" } : shift,
+      ),
+      cancellations: [
+        {
+          id: `c${Date.now()}`,
+          ownerType: "application",
+          ownerId: booking.applicationId ?? booking.id,
+          reason,
+          note,
+          cancelledByRole: get().viewerRole,
+          cancelledById:
+            get().viewerRole === "practice" ? get().currentPracticeId : get().currentLocumId,
+          createdAt: Date.now(),
+        },
+        ...get().cancellations,
+      ],
+    });
+  },
   submitTimesheet: (t) => {
+    const state = get();
+    const shift = state.shifts.find((item) => item.id === t.shiftId);
+    const booking = state.bookings.find(
+      (item) =>
+        item.shiftId === t.shiftId && item.locumId === t.locumId && item.status !== "cancelled",
+    );
+    const alreadySubmitted = state.timesheets.some(
+      (item) => item.shiftId === t.shiftId && item.locumId === t.locumId,
+    );
+    if (!shift || !booking || alreadySubmitted) return;
+    const today = new Date().toISOString().slice(0, 10);
+    if (shift.date > today && booking.status !== "completed") return;
     const ts: Timesheet = {
       ...t,
       id: `t${Date.now()}`,
       status: "Submitted",
       submittedAt: Date.now(),
     };
-    set({ timesheets: [...get().timesheets, ts] });
+    set({ timesheets: [...state.timesheets, ts] });
   },
   approveTimesheet: (id) =>
     set({
       timesheets: get().timesheets.map((t) =>
-        t.id === id ? { ...t, status: "Approved", approvedAt: Date.now() } : t,
+        t.id === id && t.status === "Submitted"
+          ? { ...t, status: "Approved", approvedAt: Date.now() }
+          : t,
       ),
+    }),
+  queryTimesheet: (id) =>
+    set({
+      timesheets: get().timesheets.map((t) => (t.id === id ? { ...t, status: "Queried" } : t)),
     }),
   createInvoiceDraft: (timesheetId) => {
     get().createInvoiceDraftFromTimesheet(timesheetId);
@@ -1238,13 +1532,17 @@ export const useStore = create<State>((set, get) => ({
   issueInvoice: (invoiceId) =>
     set({
       invoices: get().invoices.map((invoice) =>
-        invoice.id === invoiceId ? { ...invoice, status: "Issued", issuedAt: Date.now() } : invoice,
+        invoice.id === invoiceId && invoice.status === "Draft"
+          ? { ...invoice, status: "Issued", issuedAt: Date.now() }
+          : invoice,
       ),
     }),
   markInvoicePaid: (invoiceId) =>
     set({
       invoices: get().invoices.map((invoice) =>
-        invoice.id === invoiceId ? { ...invoice, status: "Paid outside platform" } : invoice,
+        invoice.id === invoiceId && invoice.status === "Issued"
+          ? { ...invoice, status: "Paid outside platform" }
+          : invoice,
       ),
     }),
   connectGoogleCalendarPlaceholder: (ownerType, ownerId) =>
@@ -1276,7 +1574,13 @@ export const useStore = create<State>((set, get) => ({
   markCompleted: (shiftId) =>
     set({
       shifts: get().shifts.map((s) => (s.id === shiftId ? { ...s, status: "Completed" } : s)),
+      bookings: get().bookings.map((booking) =>
+        booking.shiftId === shiftId
+          ? { ...booking, status: "completed", completedAt: Date.now() }
+          : booking,
+      ),
     }),
+  markShiftCompleted: (shiftId) => get().markCompleted(shiftId),
 }));
 
 // helpers

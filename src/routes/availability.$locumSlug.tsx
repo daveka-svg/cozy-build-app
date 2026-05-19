@@ -1,5 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, CalendarDays, Clock, MapPin, Send, Star } from "lucide-react";
+import type { ReactNode } from "react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  Clock,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Send,
+  Star,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DateBlock, RoleChip, fmtDate, fmtGBP } from "@/components/Bits";
@@ -79,7 +89,7 @@ function PublicLocumAvailability() {
         request.status === "Sent",
     );
     if (duplicate) {
-      setMessage("Request already sent for this date.");
+      setMessage("Already requested.");
       return;
     }
     sendBookingRequest({
@@ -93,7 +103,7 @@ function PublicLocumAvailability() {
       locationId: practice.locations[0].id,
       message: `Requested from ${locum.displayName}'s public availability page.`,
     });
-    setMessage("Booking request sent to the locum.");
+    setMessage("Request sent.");
   };
 
   return (
@@ -139,6 +149,18 @@ function PublicLocumAvailability() {
                 <p className="mt-1 text-sm text-muted-foreground">
                   {locum.publicHeadline ?? `${locum.role} locum around ${locum.postcodeArea}`}
                 </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <IconLink
+                    href={`https://wa.me/${locum.whatsapp.replace(/[^0-9]/g, "")}`}
+                    label="WhatsApp"
+                    icon={<MessageCircle className="size-4" />}
+                  />
+                  <IconLink
+                    href={`mailto:${locum.email}`}
+                    label="Email"
+                    icon={<Mail className="size-4" />}
+                  />
+                </div>
               </div>
             </div>
           </section>
@@ -166,7 +188,7 @@ function PublicLocumAvailability() {
                   </div>
                   <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                     <Clock className="size-3" />
-                    Public availability
+                    Available
                   </div>
                   <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                     <MapPin className="size-3" />
@@ -175,17 +197,17 @@ function PublicLocumAvailability() {
                 </div>
               </div>
               <div className="rounded-md border bg-muted/30 p-3 text-sm">
-                <div className="text-xs text-muted-foreground">Suggested rate</div>
+                <div className="text-xs text-muted-foreground">Rate</div>
                 <div className="mt-1 font-semibold">{fmtGBP(locum.hourlyRate)}/hr</div>
               </div>
               <Button className="w-full" onClick={requestBooking}>
                 <Send className="size-4" />
-                Request booking
+                Request
               </Button>
             </div>
           ) : (
             <div className="mt-4 rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-              No public availability on this date.
+              No availability.
             </div>
           )}
           {message && (
@@ -253,6 +275,21 @@ function CalendarPanel({
         })}
       </div>
     </section>
+  );
+}
+
+function IconLink({ href, label, icon }: { href: string; label: string; icon: ReactNode }) {
+  return (
+    <a
+      href={href}
+      target={href.startsWith("http") ? "_blank" : undefined}
+      rel={href.startsWith("http") ? "noreferrer" : undefined}
+      aria-label={label}
+      title={label}
+      className="inline-grid size-8 place-items-center rounded-md border bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+    >
+      {icon}
+    </a>
   );
 }
 

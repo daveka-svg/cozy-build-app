@@ -1,9 +1,25 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader } from "@/components/AppShell";
-import { useStore } from "@/lib/store";
-import { DateBlock, RoleChip, StatusChip, fmtDate } from "@/components/Bits";
+import { calcShiftValue, useStore } from "@/lib/store";
+import {
+  DateBlock,
+  MetricTile,
+  Panel,
+  RoleChip,
+  StatusChip,
+  fmtDate,
+  fmtGBP,
+} from "@/components/Bits";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, MessageCircle, Mail, Plus } from "lucide-react";
+import {
+  CalendarDays,
+  Clock,
+  FileText,
+  MessageCircle,
+  Mail,
+  Plus,
+  WalletCards,
+} from "lucide-react";
 import { useState } from "react";
 import { ApplicationsModal } from "@/components/ApplicationsModal";
 import { LocumProfileModal } from "@/components/LocumProfileModal";
@@ -15,7 +31,8 @@ export const Route = createFileRoute("/_app/practice/")({
 });
 
 function PracticeDashboard() {
-  const { shifts, applications, locums, currentPracticeId, practices } = useStore();
+  const { shifts, applications, locums, currentPracticeId, practices, timesheets, invoices } =
+    useStore();
   const [openShiftId, setOpenShiftId] = useState<string | null>(null);
   const [profileLocumId, setProfileLocumId] = useState<string | null>(null);
   const practice = practices.find((p) => p.id === currentPracticeId)!;
@@ -37,62 +54,75 @@ function PracticeDashboard() {
       const booked = applications.find((a) => a.shiftId === s.id && a.status === "Booked");
       return { s, l: booked ? locums.find((l) => l.id === booked.locumId) : undefined };
     });
+  const submittedTimesheets = timesheets.filter((timesheet) => {
+    const shift = myShifts.find((item) => item.id === timesheet.shiftId);
+    return shift && timesheet.status === "Submitted";
+  });
+  const invoiceChecks = invoices.filter((invoice) => {
+    const shift = myShifts.find((item) => item.id === invoice.shiftId);
+    return shift && invoice.status !== "Paid outside platform";
+  });
+  const bookedValue = upcoming.reduce((sum, item) => sum + calcShiftValue(item.s), 0);
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <PageHeader
-        title={`Hi, ${practice.tradingName}`}
-        description="Here's what needs you today."
+        title={practice.tradingName}
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" asChild>
               <Link to="/book/$shareSlug" params={{ shareSlug: practice.shareSlug }}>
-                <CalendarDays className="size-4" /> Share calendar
+                <CalendarDays className="size-4" /> Share
               </Link>
             </Button>
             <Button asChild>
               <Link to="/practice/post">
-                <Plus className="size-4" /> Post shift
+                <Plus className="size-4" /> Shift
               </Link>
             </Button>
           </div>
         }
       />
 
-      <section className="mb-6 rounded-lg border bg-card p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="font-semibold">Public availability calendar</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Share a live link so locums and practice staff can see open dates and request shifts.
-            </p>
-          </div>
-          <Button variant="outline" asChild>
-            <Link to="/book/$shareSlug" params={{ shareSlug: practice.shareSlug }}>
-              Open booking link
-            </Link>
-          </Button>
-        </div>
-      </section>
+      <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricTile
+          label="Requests"
+          value={newApps.length}
+          icon={<FileText className="size-4" />}
+        />
+        <MetricTile
+          label="Booked"
+          value={upcoming.length}
+          icon={<CalendarDays className="size-4" />}
+        />
+        <MetricTile
+          label="Hours"
+          value={submittedTimesheets.length}
+          icon={<Clock className="size-4" />}
+        />
+        <MetricTile
+          label="Invoice"
+          value={invoiceChecks.length}
+          detail={fmtGBP(bookedValue)}
+          icon={<WalletCards className="size-4" />}
+        />
+      </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        <section className="rounded-xl border bg-card">
-          <div className="px-5 py-4 border-b flex items-center justify-between">
-            <h2 className="font-semibold">Next applications</h2>
-            <div className="flex items-center gap-2">
-              {newApps.length > 0 && (
-                <StatusChip
-                  status={`${newApps.length} new applicant${newApps.length === 1 ? "" : "s"}`}
-                />
-              )}
-            </div>
-          </div>
+        <Panel
+          title="Requests"
+          action={
+            newApps.length > 0 ? (
+              <StatusChip status={`${newApps.length} request${newApps.length === 1 ? "" : "s"}`} />
+            ) : undefined
+          }
+        >
           <div className="divide-y">
             {newApps.length === 0 && (
               <div className="p-8 text-center">
-                <p className="text-sm text-muted-foreground mb-3">No new applications.</p>
+                <p className="text-sm text-muted-foreground mb-3">No requests.</p>
                 <Button variant="outline" asChild>
-                  <Link to="/practice/post">Post shift</Link>
+                  <Link to="/practice/post">Post</Link>
                 </Button>
               </div>
             )}
@@ -102,7 +132,7 @@ function PracticeDashboard() {
                 <div className="flex-1 min-w-0">
                   <LocumIdentity
                     locum={l}
-                    status={a.status === "Applied" ? "New" : a.status}
+                    status={a.status === "Applied" ? "Request" : a.status}
                     onProfile={setProfileLocumId}
                   />
                 </div>
@@ -112,18 +142,15 @@ function PracticeDashboard() {
               </div>
             ))}
           </div>
-        </section>
+        </Panel>
 
-        <section className="rounded-xl border bg-card">
-          <div className="px-5 py-4 border-b flex items-center justify-between">
-            <h2 className="font-semibold">Upcoming booked shifts</h2>
-            <span className="text-xs text-muted-foreground">{upcoming.length}</span>
-          </div>
+        <Panel
+          title="Booked"
+          action={<span className="text-xs text-muted-foreground">{upcoming.length}</span>}
+        >
           <div className="divide-y">
             {upcoming.length === 0 && (
-              <div className="p-8 text-center text-sm text-muted-foreground">
-                No booked shifts yet.
-              </div>
+              <div className="p-8 text-center text-sm text-muted-foreground">No shifts yet.</div>
             )}
             {upcoming.map(({ s, l }) => {
               const loc = practice.locations.find((x) => x.id === s.locationId);
@@ -174,7 +201,7 @@ function PracticeDashboard() {
               );
             })}
           </div>
-        </section>
+        </Panel>
       </div>
 
       {openShiftId && (

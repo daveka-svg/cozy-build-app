@@ -1,112 +1,330 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { Globe, ListFilter, MapPin, Navigation, Send, Users } from "lucide-react";
 import { PageHeader } from "@/components/AppShell";
-import { useStore, calcShiftValue, type Role } from "@/lib/store";
+import { EmptyState, StatusChip, TagMultiSelect, fmtDate, fmtGBP } from "@/components/Bits";
+import { ShiftCard } from "@/components/PlacementUI";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { DateBlock, RoleChip, fmtGBP } from "@/components/Bits";
-import { Globe, MapPin, FileText, Send, Users } from "lucide-react";
-import { useState } from "react";
+import { calcShiftValue, type Role, useStore } from "@/lib/store";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/locum/find")({
-  head: () => ({ meta: [{ title: "Find Shifts — Every Tail Locums" }] }),
+  head: () => ({ meta: [{ title: "Find Shifts - Every Tail Locums" }] }),
   component: FindShifts,
 });
 
+const roles: Role[] = ["Vet", "Nurse", "Reception"];
+const pointClass = [
+  "left-[18%] top-[44%]",
+  "left-[56%] top-[34%]",
+  "left-[72%] top-[58%]",
+  "left-[36%] top-[64%]",
+];
+
 function FindShifts() {
   const { shifts, practices, applications, currentLocumId, locums, apply } = useStore();
-  const me = locums.find((l) => l.id === currentLocumId)!;
-  const [role, setRole] = useState<Role | "All">("All");
-  const [postcode, setPostcode] = useState("");
+  const me = locums.find((locum) => locum.id === currentLocumId)!;
+  const [selectedRoles, setSelectedRoles] = useState<Role[]>([]);
+  const [query, setQuery] = useState("");
   const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [minRate, setMinRate] = useState(0);
+  const [selectedDate, setSelectedDate] = useState("");
 
   const today = new Date().toISOString().slice(0, 10);
-  const filtered = shifts.filter((s) => {
-    if (s.status !== "Open" && s.status !== "New applicants") return false;
-    if (s.date < today) return false;
-    if (role !== "All" && s.role !== role) return false;
-    if (dateFrom && s.date < dateFrom) return false;
-    if (minRate && s.hourlyRate < minRate) return false;
-    if (postcode) {
-      const p = practices.find((x) => x.id === s.practiceId);
-      const loc = p?.locations.find((l) => l.id === s.locationId);
-      if (!loc?.postcode.toLowerCase().includes(postcode.toLowerCase())) return false;
-    }
-    return true;
-  });
+  const filtered = shifts
+    .filter((shift) => {
+      if (shift.status !== "Open" && shift.status !== "New applicants") return false;
+      if (shift.date < today) return false;
+      if (selectedRoles.length > 0 && !selectedRoles.includes(shift.role)) return false;
+      if (selectedDate && shift.date !== selectedDate) return false;
+      if (dateFrom && shift.date < dateFrom) return false;
+      if (dateTo && shift.date > dateTo) return false;
+      if (minRate && shift.hourlyRate < minRate) return false;
+      if (query.trim()) {
+        const practice = practices.find((item) => item.id === shift.practiceId);
+        const location = practice?.locations.find((item) => item.id === shift.locationId);
+        const haystack = [
+          practice?.tradingName,
+          location?.name,
+          location?.address,
+          location?.postcode,
+          shift.area,
+          shift.notes,
+        ]
+          .join(" ")
+          .toLowerCase();
+        if (!haystack.includes(query.trim().toLowerCase())) return false;
+      }
+      return true;
+    })
+    .sort((left, right) =>
+      `${left.date}${left.start}`.localeCompare(`${right.date}${right.start}`),
+    );
+
+  const mapPractices = Array.from(new Set(filtered.map((shift) => shift.practiceId)))
+    .map((practiceId) => practices.find((practice) => practice.id === practiceId))
+    .filter(Boolean);
+  const calendarDates = useMemo(() => new Set(filtered.map((shift) => shift.date)), [filtered]);
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <PageHeader title="Find shifts" description="Search by date, role, and minimum hourly rate." />
+    <div className="mx-auto max-w-6xl p-6">
+      <PageHeader title="Find" />
 
-      <div className="rounded-lg border bg-card p-4 grid sm:grid-cols-4 gap-3 mb-5">
-        <div>
-          <Label>Role</Label>
-          <Select value={role} onValueChange={(v) => setRole(v as Role | "All")}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{["All", "Vet", "Nurse", "Reception"].map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
-        <div><Label>City or postcode</Label><Input value={postcode} onChange={(e) => setPostcode(e.target.value)} placeholder="e.g. BS1" /></div>
-        <div><Label>Date from</Label><Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} /></div>
-        <div><Label>Min hourly rate (£)</Label><Input type="number" value={minRate || ""} onChange={(e) => setMinRate(Number(e.target.value))} /></div>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <section className="rounded-lg border bg-card p-4">
+          <div className="mb-3 flex items-center gap-2 font-medium">
+            <ListFilter className="size-4 text-muted-foreground" />
+            Filters
+          </div>
+          <div className="grid gap-3 md:grid-cols-4">
+            <div className="md:col-span-2">
+              <TagMultiSelect
+                roles={roles}
+                selectedRoles={selectedRoles}
+                onToggle={(role) =>
+                  setSelectedRoles((current) =>
+                    current.includes(role)
+                      ? current.filter((item) => item !== role)
+                      : [...current, role],
+                  )
+                }
+                onClear={() => setSelectedRoles([])}
+                emptyLabel="All roles"
+              />
+            </div>
+            <div>
+              <Label>Search</Label>
+              <Input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Practice, area, postcode"
+              />
+            </div>
+            <div>
+              <Label>Rate</Label>
+              <Input
+                type="number"
+                value={minRate || ""}
+                onChange={(event) => setMinRate(Number(event.target.value))}
+                placeholder="Min"
+              />
+            </div>
+            <div>
+              <Label>From</Label>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(event) => setDateFrom(event.target.value)}
+              />
+            </div>
+            <div>
+              <Label>To</Label>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(event) => setDateTo(event.target.value)}
+              />
+            </div>
+            <div className="flex items-end">
+              <Button
+                className="w-full"
+                variant="outline"
+                onClick={() => {
+                  setSelectedRoles([]);
+                  setQuery("");
+                  setDateFrom("");
+                  setDateTo("");
+                  setSelectedDate("");
+                  setMinRate(0);
+                }}
+              >
+                Clear
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        <MapPanel practices={mapPractices} />
       </div>
 
-      <div className="space-y-3">
-        {filtered.length === 0 && (
-          <div className="rounded-lg border bg-card p-10 text-center text-sm text-muted-foreground">No shifts match these filters.</div>
-        )}
-        {filtered.map((s) => {
-          const practice = practices.find((p) => p.id === s.practiceId)!;
-          const loc = practice.locations.find((l) => l.id === s.locationId)!;
-          const myApp = applications.find((a) => a.shiftId === s.id && a.locumId === currentLocumId);
+      <CalendarStrip
+        dates={calendarDates}
+        selectedDate={selectedDate}
+        onSelect={(date) => setSelectedDate(date === selectedDate ? "" : date)}
+      />
+
+      <div className="mt-4 space-y-3">
+        {filtered.length === 0 && <EmptyState>No shifts.</EmptyState>}
+        {filtered.map((shift) => {
+          const practice = practices.find((item) => item.id === shift.practiceId)!;
+          const location = practice.locations.find((item) => item.id === shift.locationId)!;
+          const myApp = applications.find(
+            (application) =>
+              application.shiftId === shift.id && application.locumId === currentLocumId,
+          );
           const cvOk = me.cvAttached;
-          const rcvsOk = s.role === "Reception" || !!me.rcvs;
+          const rcvsOk = shift.role === "Reception" || Boolean(me.rcvs);
           const canApply = cvOk && rcvsOk && !myApp;
+
           return (
-            <div key={s.id} className="rounded-lg border bg-card p-4">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <DateBlock date={s.date} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <RoleChip role={s.role} />
-                    <span className="text-sm font-semibold">{practice.tradingName}</span>
-                    {s.positionsNeeded > 1 && <span className="text-xs inline-flex items-center gap-1 text-muted-foreground"><Users className="size-3" />{s.positionsNeeded} positions</span>}
-                  </div>
-                  <div className="text-sm mt-1">{s.start}–{s.end} · lunch {s.lunchMinutes}m {s.lunchPaid ? "(paid)" : ""}</div>
-                  <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                    <MapPin className="size-3" /> {loc.name}, {loc.postcode} · {s.area}
-                  </div>
-                  {s.notes && <div className="text-xs text-muted-foreground italic mt-1">"{s.notes}"</div>}
+            <ShiftCard
+              key={shift.id}
+              date={shift.date}
+              role={shift.role}
+              status={myApp ? myApp.status : shift.status}
+              title={practice.tradingName}
+              meta={
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span>
+                    {shift.start}-{shift.end}
+                  </span>
+                  <span>Lunch {shift.lunchMinutes}m</span>
+                  <span>
+                    <MapPin className="mr-1 inline size-3" />
+                    {location.name}, {location.postcode}
+                  </span>
+                  {shift.positionsNeeded > 1 && (
+                    <span className="inline-flex items-center gap-1">
+                      <Users className="size-3" />
+                      {shift.positionsNeeded}
+                    </span>
+                  )}
                 </div>
-                <div className="text-right">
-                  <div className="font-semibold">{fmtGBP(s.hourlyRate)}/hr</div>
-                  <div className="text-xs text-muted-foreground">Total {fmtGBP(calcShiftValue(s))}</div>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t">
-                <Button size="sm" variant="outline" asChild><a href={practice.website} target="_blank" rel="noreferrer"><Globe className="size-4" /> Website</a></Button>
-                <Button size="sm" variant="outline" asChild><a href={`https://maps.google.com/?q=${encodeURIComponent(loc.address + " " + loc.postcode)}`} target="_blank" rel="noreferrer"><MapPin className="size-4" /> Map</a></Button>
-                {myApp ? (
-                  <span className="ml-auto text-sm text-primary font-medium">Status: {myApp.status}</span>
-                ) : (
-                  <div className="ml-auto flex items-center gap-3">
-                    {!cvOk && <span className="text-xs text-destructive">CV missing</span>}
-                    {!rcvsOk && <span className="text-xs text-destructive">RCVS number missing</span>}
-                    <Button size="sm" disabled={!canApply} onClick={() => { apply(s.id, currentLocumId, ""); toast.success("Applied — CV and contact shared"); }}>
-                      <Send className="size-4" /> Apply and share CV
+              }
+              value={
+                <>
+                  <div>{fmtGBP(shift.hourlyRate)}/hr</div>
+                  <div className="text-xs font-normal text-muted-foreground">
+                    {fmtGBP(calcShiftValue(shift))}
+                  </div>
+                </>
+              }
+              actions={
+                <>
+                  <Button size="sm" variant="outline" asChild>
+                    <a href={practice.website} target="_blank" rel="noreferrer">
+                      <Globe className="size-4" />
+                      Website
+                    </a>
+                  </Button>
+                  <Button size="sm" variant="outline" asChild>
+                    <a
+                      href={`https://maps.google.com/?q=${encodeURIComponent(`${location.address} ${location.postcode}`)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <Navigation className="size-4" />
+                      Map
+                    </a>
+                  </Button>
+                  {!myApp && (
+                    <Button
+                      size="sm"
+                      className="ml-auto"
+                      disabled={!canApply}
+                      onClick={() => {
+                        apply(shift.id, currentLocumId, "");
+                        toast.success("Applied");
+                      }}
+                    >
+                      <Send className="size-4" />
+                      Apply
                     </Button>
-                  </div>
-                )}
-              </div>
-              {!myApp && <p className="text-[11px] text-muted-foreground mt-2">Applying shares your CV, WhatsApp/email, and profile with this practice.</p>}
-            </div>
+                  )}
+                </>
+              }
+            />
           );
         })}
       </div>
     </div>
+  );
+}
+
+function MapPanel({
+  practices,
+}: {
+  practices: Array<ReturnType<typeof useStore.getState>["practices"][number] | undefined>;
+}) {
+  return (
+    <section className="rounded-lg border bg-card p-4">
+      <div className="mb-3 flex items-center gap-2 font-medium">
+        <MapPin className="size-4 text-muted-foreground" />
+        Map
+      </div>
+      <div className="relative h-56 overflow-hidden rounded-md border bg-[linear-gradient(135deg,#edf7f1_0%,#f8faf8_45%,#eef2f0_100%)]">
+        <div className="absolute left-0 top-1/3 h-px w-full bg-emerald-900/10" />
+        <div className="absolute left-1/4 top-0 h-full w-px bg-emerald-900/10" />
+        <div className="absolute left-2/3 top-0 h-full w-px bg-emerald-900/10" />
+        {practices.map((practice, index) => {
+          if (!practice) return null;
+          return (
+            <a
+              key={practice.id}
+              href={`/book/${practice.shareSlug}`}
+              className={cn(
+                "absolute grid size-8 place-items-center rounded-full border border-primary bg-primary text-primary-foreground shadow-sm",
+                pointClass[index % pointClass.length],
+              )}
+              title={practice.tradingName}
+            >
+              <MapPin className="size-4" />
+            </a>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function CalendarStrip({
+  dates,
+  selectedDate,
+  onSelect,
+}: {
+  dates: Set<string>;
+  selectedDate: string;
+  onSelect: (date: string) => void;
+}) {
+  const days = Array.from(dates).sort().slice(0, 12);
+  return (
+    <section className="mt-4 rounded-lg border bg-card p-3">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <div className="font-medium">Calendar</div>
+        {selectedDate && (
+          <button
+            className="text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => onSelect(selectedDate)}
+          >
+            Clear
+          </button>
+        )}
+      </div>
+      {days.length === 0 ? (
+        <div className="text-sm text-muted-foreground">No dates.</div>
+      ) : (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {days.map((date) => (
+            <button
+              key={date}
+              onClick={() => onSelect(date)}
+              className={cn(
+                "min-w-24 rounded-md border px-3 py-2 text-left text-sm",
+                selectedDate === date
+                  ? "border-primary bg-primary/10"
+                  : "bg-background hover:bg-accent",
+              )}
+            >
+              <div className="font-medium">{date.slice(-2)}</div>
+              <div className="text-xs text-muted-foreground">{fmtDate(date)}</div>
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

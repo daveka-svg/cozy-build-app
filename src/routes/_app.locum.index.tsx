@@ -147,10 +147,7 @@ function LocumDashboard() {
   );
   return (
     <div className="mx-auto max-w-6xl p-6">
-      <PageHeader
-        title={`Hi, ${me.displayName}`}
-        description={`Your locum month, profile readiness, and next bookings for ${monthLabel}.`}
-      />
+      <PageHeader title={`Hi, ${me.displayName}`} />
 
       <section className="mb-5 overflow-hidden rounded-lg border bg-card">
         <div className="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
@@ -182,13 +179,13 @@ function LocumDashboard() {
               <Button size="sm" asChild>
                 <Link to="/locum/find">
                   <Search className="size-4" />
-                  Find shifts
+                  Find
                 </Link>
               </Button>
               <Button size="sm" variant="outline" asChild>
                 <Link to="/locum/bookings">
                   <Calendar className="size-4" />
-                  My work
+                  Work
                 </Link>
               </Button>
             </div>
@@ -227,21 +224,21 @@ function LocumDashboard() {
           value={workedRows.length}
           detail={monthLabel}
           icon={CalendarClock}
-          link={{ to: "/locum/bookings", label: "Open" }}
+          link={{ to: "/locum/bookings", label: "View" }}
         />
         <Stat
           label="Hours worked"
           value={hoursWorked.toFixed(1)}
           detail="Approved or completed"
           icon={Clock}
-          link={{ to: "/locum/bookings", label: "Open" }}
+          link={{ to: "/locum/bookings", label: "View" }}
         />
         <Stat
           label="Earned"
           value={money.format(earned)}
           detail="Invoices or approved hours"
           icon={Wallet}
-          link={{ to: "/locum/bookings", label: "Open" }}
+          link={{ to: "/locum/bookings", label: "View" }}
         />
         <Stat
           label="Pending"
@@ -251,11 +248,11 @@ function LocumDashboard() {
           link={{ to: "/locum/bookings", label: "Open" }}
         />
         <Stat
-          label="Open shifts"
+          label="Shifts"
           value={openShifts}
-          detail="Available to browse"
+          detail="Available"
           icon={Search}
-          link={{ to: "/locum/find", label: "Open" }}
+          link={{ to: "/locum/find", label: "View" }}
         />
       </div>
 
@@ -263,14 +260,11 @@ function LocumDashboard() {
         <section className="rounded-lg border bg-card p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h3 className="font-semibold">Upcoming bookings</h3>
-              <p className="text-sm text-muted-foreground">
-                Confirmed shifts that need travel, files, or calendar prep.
-              </p>
+              <h3 className="font-semibold">Booked</h3>
             </div>
             <Button size="sm" variant="outline" asChild>
               <Link to="/locum/bookings">
-                View all
+                View
                 <ArrowRight className="size-4" />
               </Link>
             </Button>
@@ -278,8 +272,7 @@ function LocumDashboard() {
           <div className="mt-4 space-y-3">
             {upcomingRows.length === 0 && (
               <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-                No upcoming confirmed bookings. Search open shifts or publish availability for
-                practices to request you.
+                No shifts yet.
               </div>
             )}
             {upcomingRows.map(({ application, shift }) => {
@@ -311,12 +304,9 @@ function LocumDashboard() {
         <section className="rounded-lg border bg-card p-4">
           <div className="flex items-center gap-2 font-semibold">
             <Calendar className="size-4 text-primary" />
-            Availability and public link
+            Availability
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {publicAvailability} upcoming public availability slots. Practices can review your
-            profile and ask for cover from your public page.
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{publicAvailability} public slots.</p>
           <div className="mt-3 rounded-md border bg-muted/30 p-3 text-sm">
             <div className="text-xs uppercase tracking-wide text-muted-foreground">Public page</div>
             <a
@@ -329,13 +319,13 @@ function LocumDashboard() {
           <div className="mt-3 grid gap-2">
             <Button size="sm" variant="outline" asChild>
               <Link to="/locum/profile">
-                Manage photos and docs
+                Profile
                 <ArrowRight className="size-4" />
               </Link>
             </Button>
             <Button size="sm" variant="outline" asChild>
               <Link to="/locum/bookings">
-                Check applications and invoices
+                Work
                 <ArrowRight className="size-4" />
               </Link>
             </Button>

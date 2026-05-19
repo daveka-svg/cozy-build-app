@@ -11,7 +11,7 @@ import {
   type Shift,
   type Timesheet,
 } from "@/lib/store";
-import { DateBlock, RoleChip, StatusChip, fmtGBP, fmtDate } from "@/components/Bits";
+import { DateBlock, MetricTile, RoleChip, StatusChip, fmtGBP, fmtDate } from "@/components/Bits";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -41,7 +41,7 @@ import {
   WalletCards,
   X,
 } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/locum/bookings")({
@@ -104,7 +104,6 @@ function Bookings() {
     practices,
     currentLocumId,
     withdraw,
-    markCompleted,
     submitTimesheet,
     timesheets,
     createInvoiceDraftFromTimesheet,
@@ -112,7 +111,8 @@ function Bookings() {
     invoices,
     attachments,
     bookingRequests,
-    respondToBookingRequest,
+    acceptBookingRequest,
+    declineBookingRequest,
     cancellations,
     addAttachment,
   } = useStore();
@@ -237,31 +237,28 @@ function Bookings() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      <PageHeader
-        title="My Work"
-        description="Bookings, availability requests, worked hours, invoices, and calendar planning."
-      />
+      <PageHeader title="My Work" />
 
       <div className="grid gap-3 md:grid-cols-4">
-        <MetricCard
+        <MetricTile
           icon={<BriefcaseBusiness className="size-4" />}
-          label="Worked this month"
+          label="Worked"
           value={String(monthTimesheets.length)}
-          detail="submitted shifts"
+          detail="This month"
         />
-        <MetricCard
+        <MetricTile
           icon={<Clock className="size-4" />}
           label="Hours"
           value={monthHours.toFixed(1)}
           detail="from worked hours"
         />
-        <MetricCard
+        <MetricTile
           icon={<WalletCards className="size-4" />}
-          label="Approved earnings"
+          label="Earned"
           value={fmtGBP(monthEarned)}
-          detail="ready to invoice"
+          detail="Approved"
         />
-        <MetricCard
+        <MetricTile
           icon={<Hourglass className="size-4" />}
           label="Pending"
           value={String(
@@ -276,8 +273,8 @@ function Bookings() {
         <TabsList className="flex h-auto flex-wrap justify-start">
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
           <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-          <TabsTrigger value="applications">Applications</TabsTrigger>
-          <TabsTrigger value="requests">Practice requests</TabsTrigger>
+          <TabsTrigger value="applications">Applied</TabsTrigger>
+          <TabsTrigger value="requests">Requests</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
 
@@ -307,10 +304,6 @@ function Bookings() {
                       attachments={attachments}
                       cancellations={cancellations}
                       onDownloadIcs={downloadIcs}
-                      onMarkCompleted={(shiftId) => {
-                        markCompleted(shiftId);
-                        toast("Demo: marked completed");
-                      }}
                       onSubmitTimesheet={setTsShiftId}
                       onCreateDraft={createDraft}
                       onIssueInvoice={(invoiceId) => {
@@ -333,10 +326,6 @@ function Bookings() {
             attachments={attachments}
             cancellations={cancellations}
             onDownloadIcs={downloadIcs}
-            onMarkCompleted={(shiftId) => {
-              markCompleted(shiftId);
-              toast("Demo: marked completed");
-            }}
             onSubmitTimesheet={setTsShiftId}
             onCreateDraft={createDraft}
             onIssueInvoice={(invoiceId) => {
@@ -354,10 +343,6 @@ function Bookings() {
             attachments={attachments}
             cancellations={cancellations}
             onDownloadIcs={downloadIcs}
-            onMarkCompleted={(shiftId) => {
-              markCompleted(shiftId);
-              toast("Demo: marked completed");
-            }}
             onSubmitTimesheet={setTsShiftId}
             onCreateDraft={createDraft}
             onIssueInvoice={(invoiceId) => {
@@ -372,7 +357,7 @@ function Bookings() {
           <PracticeRequests
             items={myRequests}
             onAccept={(requestId) => {
-              respondToBookingRequest(requestId, "Accepted");
+              acceptBookingRequest(requestId);
               toast.success("Practice request accepted");
             }}
             onDecline={setDeclineTarget}
@@ -386,10 +371,6 @@ function Bookings() {
             attachments={attachments}
             cancellations={cancellations}
             onDownloadIcs={downloadIcs}
-            onMarkCompleted={(shiftId) => {
-              markCompleted(shiftId);
-              toast("Demo: marked completed");
-            }}
             onSubmitTimesheet={setTsShiftId}
             onCreateDraft={createDraft}
             onIssueInvoice={(invoiceId) => {
@@ -447,34 +428,11 @@ function Bookings() {
         onOpenChange={(open) => !open && setDeclineTarget(null)}
         onConfirm={(reason) => {
           if (!declineTarget) return;
-          respondToBookingRequest(declineTarget.request.id, "Declined", reason);
+          declineBookingRequest(declineTarget.request.id, reason);
           toast.success("Request declined");
           setDeclineTarget(null);
         }}
       />
-    </div>
-  );
-}
-
-function MetricCard({
-  icon,
-  label,
-  value,
-  detail,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-  detail: string;
-}) {
-  return (
-    <div className="rounded-lg border bg-card p-4">
-      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-        {icon}
-        {label}
-      </div>
-      <div className="mt-2 text-2xl font-semibold">{value}</div>
-      <div className="text-xs text-muted-foreground">{detail}</div>
     </div>
   );
 }
@@ -485,7 +443,6 @@ function WorkList({
   attachments,
   cancellations,
   onDownloadIcs,
-  onMarkCompleted,
   onSubmitTimesheet,
   onCreateDraft,
   onIssueInvoice,
@@ -496,7 +453,6 @@ function WorkList({
   attachments: Attachment[];
   cancellations: { ownerType: string; ownerId: string; reason: string; note?: string }[];
   onDownloadIcs: (shiftId: string) => void;
-  onMarkCompleted: (shiftId: string) => void;
   onSubmitTimesheet: (shiftId: string) => void;
   onCreateDraft: (timesheetId: string) => void;
   onIssueInvoice: (invoiceId: string) => void;
@@ -519,7 +475,6 @@ function WorkList({
           attachments={attachments}
           cancellations={cancellations}
           onDownloadIcs={onDownloadIcs}
-          onMarkCompleted={onMarkCompleted}
           onSubmitTimesheet={onSubmitTimesheet}
           onCreateDraft={onCreateDraft}
           onIssueInvoice={onIssueInvoice}
@@ -535,7 +490,6 @@ function WorkItemCard({
   attachments,
   cancellations,
   onDownloadIcs,
-  onMarkCompleted,
   onSubmitTimesheet,
   onCreateDraft,
   onIssueInvoice,
@@ -545,7 +499,6 @@ function WorkItemCard({
   attachments: Attachment[];
   cancellations: { ownerType: string; ownerId: string; reason: string; note?: string }[];
   onDownloadIcs: (shiftId: string) => void;
-  onMarkCompleted: (shiftId: string) => void;
   onSubmitTimesheet: (shiftId: string) => void;
   onCreateDraft: (timesheetId: string) => void;
   onIssueInvoice: (invoiceId: string) => void;
@@ -619,23 +572,18 @@ function WorkItemCard({
               <>
                 <Button size="sm" variant="outline" onClick={() => onDownloadIcs(s.id)}>
                   <CalendarPlus className="size-4" />
-                  Add to calendar
+                  Calendar
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => onWithdraw(item)}>
                   <Ban className="size-4" />
-                  Cancel booking
+                  Cancel
                 </Button>
               </>
-            )}
-            {isPast && s.status !== "Completed" && (
-              <Button size="sm" variant="ghost" onClick={() => onMarkCompleted(s.id)}>
-                Demo: mark completed
-              </Button>
             )}
             {isPast && ts?.status === "Approved" && !inv && (
               <Button size="sm" onClick={() => onCreateDraft(ts.id)}>
                 <FileText className="size-4" />
-                Generate invoice
+                Invoice
               </Button>
             )}
           </>
@@ -646,16 +594,16 @@ function WorkItemCard({
             Withdraw
           </Button>
         )}
-        {s.status === "Completed" && a.status === "Booked" && !ts && (
+        {isPast && a.status === "Booked" && !ts && (
           <Button size="sm" onClick={() => onSubmitTimesheet(s.id)}>
             <Clock className="size-4" />
-            Submit timesheet
+            Hours
           </Button>
         )}
         {ts?.status === "Submitted" && (
           <span className="self-center text-xs text-muted-foreground">
             <Check className="mr-1 inline size-3" />
-            Hours submitted, awaiting approval
+            Submitted
           </span>
         )}
       </div>
@@ -672,7 +620,7 @@ function WorkItemCard({
             onCreateDraft={ts ? () => onCreateDraft(ts.id) : undefined}
             onIssue={inv ? () => onIssueInvoice(inv.id) : undefined}
           />
-          <EvidenceList attachments={evidence} empty="No timesheet evidence attached." />
+          {evidence.length > 0 && <EvidenceList attachments={evidence} empty="No evidence." />}
         </div>
       )}
     </div>
@@ -691,8 +639,7 @@ function PracticeRequests({
   if (items.length === 0) {
     return (
       <div className="rounded-lg border bg-card p-10 text-center text-sm text-muted-foreground">
-        No direct practice requests yet. When practices suggest cover from your availability, they
-        will appear here.
+        No requests.
       </div>
     );
   }
@@ -737,11 +684,11 @@ function PracticeRequests({
             <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
               <Button size="sm" onClick={() => onAccept(item.request.id)}>
                 <Check className="size-4" />
-                Accept request
+                Accept
               </Button>
               <Button size="sm" variant="outline" onClick={() => onDecline(item)}>
                 <X className="size-4" />
-                Decline with reason
+                Decline
               </Button>
             </div>
           )}

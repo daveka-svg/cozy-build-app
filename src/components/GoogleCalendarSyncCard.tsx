@@ -9,11 +9,13 @@ export function GoogleCalendarSyncCard({
   ownerType: "practice" | "locum";
   ownerId: string;
 }) {
-  const setting = useStore((s) =>
-    s.calendarSyncSettings.find((item) => item.ownerType === ownerType && item.ownerId === ownerId),
+  const setting = useStore((state) =>
+    state.calendarSyncSettings.find(
+      (item) => item.ownerType === ownerType && item.ownerId === ownerId,
+    ),
   );
-  const connect = useStore((s) => s.connectGoogleCalendarPlaceholder);
-  const sync = useStore((s) => s.syncCalendarPlaceholder);
+  const connect = useStore((state) => state.connectGoogleCalendarPlaceholder);
+  const sync = useStore((state) => state.syncCalendarPlaceholder);
   const connected = setting?.status === "Connected";
 
   return (
@@ -23,18 +25,13 @@ export function GoogleCalendarSyncCard({
           <CalendarCheck className="size-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="font-medium">Google Calendar sync</div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            MVP placeholder for pushing confirmed bookings and pulling busy blocks once auth and
-            storage are live.
-          </p>
+          <div className="font-medium">Google Calendar</div>
           <div className="mt-2 text-xs text-muted-foreground">
-            Status:{" "}
-            <span className="font-medium text-foreground">
-              {setting?.status ?? "Not connected"}
-            </span>
+            {setting?.status && (
+              <span className="font-medium text-foreground">{setting.status}</span>
+            )}
             {setting?.lastSyncedAt && (
-              <span> · Last sync {new Date(setting.lastSyncedAt).toLocaleString("en-GB")}</span>
+              <span> Last sync {new Date(setting.lastSyncedAt).toLocaleString("en-GB")}</span>
             )}
           </div>
         </div>
@@ -46,7 +43,7 @@ export function GoogleCalendarSyncCard({
           onClick={() => connect(ownerType, ownerId)}
         >
           <CalendarCheck className="size-4" />
-          {connected ? "Reconnect Google" : "Connect Google"}
+          {connected ? "Reconnect" : "Connect"}
         </Button>
         <Button
           size="sm"
@@ -55,7 +52,7 @@ export function GoogleCalendarSyncCard({
           onClick={() => sync(ownerType, ownerId)}
         >
           <RefreshCw className="size-4" />
-          Sync now
+          Sync
         </Button>
       </div>
     </section>

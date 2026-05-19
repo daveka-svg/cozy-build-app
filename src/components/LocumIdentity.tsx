@@ -22,7 +22,7 @@ export function LocumIdentity({
     <div className={cn("flex min-w-0 items-center gap-3", className)}>
       <div
         className={cn(
-          "grid shrink-0 place-items-center rounded-full bg-amber-50 font-semibold text-amber-700",
+          "grid shrink-0 place-items-center rounded-full bg-stone-100 font-semibold text-stone-700",
           compact ? "size-8 text-xs" : "size-9 text-sm",
         )}
       >
@@ -32,7 +32,7 @@ export function LocumIdentity({
         <button
           type="button"
           onClick={() => onProfile(locum.id)}
-          className="max-w-full truncate rounded-sm text-left font-medium underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="max-w-full truncate rounded-sm text-left font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {locum.displayName}
         </button>
@@ -56,7 +56,7 @@ export function LocumContactLinks({ locum, className }: { locum: Locum; classNam
         href={whatsappHref}
         target="_blank"
         rel="noreferrer"
-        className="inline-flex items-center gap-1 text-emerald-700 underline-offset-4 hover:underline"
+        className="inline-flex items-center gap-1 text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
       >
         <MessageCircle className="size-3.5" />
         {locum.whatsapp}

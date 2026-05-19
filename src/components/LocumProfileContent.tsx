@@ -577,23 +577,19 @@ function GoogleCalendarPanel({
         <div>
           <div className="flex items-center gap-2 font-semibold">
             <CalendarDays className="size-4 text-primary" />
-            Google Calendar sync
+            Google Calendar
           </div>
-          <p className="text-sm text-muted-foreground">
-            Placeholder sync for {locum.displayName}. Real OAuth can replace this once auth and
-            persistence are live.
-          </p>
         </div>
-        <StatusChip status={sync?.status ?? "Not connected"} />
+        {sync && <StatusChip status={sync.status} />}
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <Button size="sm" variant="outline" onClick={onConnect}>
-          Connect Google Calendar
+          Connect
         </Button>
         <Button size="sm" variant="outline" onClick={onSync}>
-          Sync now
+          Sync
         </Button>
-        <span className="text-xs text-muted-foreground">Last sync: {lastSynced}</span>
+        <span className="text-xs text-muted-foreground">{lastSynced}</span>
       </div>
     </section>
   );

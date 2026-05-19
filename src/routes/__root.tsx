@@ -76,14 +76,28 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "Build custom web applications from detailed descriptions." },
       { name: "author", content: "Lovable" },
       { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Build custom web applications from detailed descriptions." },
+      {
+        property: "og:description",
+        content: "Build custom web applications from detailed descriptions.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "Lovable App" },
-      { name: "twitter:description", content: "Build custom web applications from detailed descriptions." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/282181b9-8f8f-4802-b638-e26b36544ba7/id-preview-d50ca055--30bf2c38-c84d-4edd-beae-384537f3c83c.lovable.app-1778690367518.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/282181b9-8f8f-4802-b638-e26b36544ba7/id-preview-d50ca055--30bf2c38-c84d-4edd-beae-384537f3c83c.lovable.app-1778690367518.png" },
+      {
+        name: "twitter:description",
+        content: "Build custom web applications from detailed descriptions.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/282181b9-8f8f-4802-b638-e26b36544ba7/id-preview-d50ca055--30bf2c38-c84d-4edd-beae-384537f3c83c.lovable.app-1778690367518.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/282181b9-8f8f-4802-b638-e26b36544ba7/id-preview-d50ca055--30bf2c38-c84d-4edd-beae-384537f3c83c.lovable.app-1778690367518.png",
+      },
     ],
     links: [
       {

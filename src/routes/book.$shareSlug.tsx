@@ -8,18 +8,16 @@ import {
   Copy,
   ExternalLink,
   Globe,
-  ListFilter,
   Mail,
   MapPin,
   PawPrint,
   Phone,
   Send,
-  X,
   type LucideIcon,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { RoleChip, fmtDate, fmtGBP } from "@/components/Bits";
+import { RoleChip, TagMultiSelect, fmtDate, fmtGBP } from "@/components/Bits";
 import {
   calcShiftValue,
   type Practice,
@@ -145,7 +143,7 @@ function PublicBookingCalendar() {
             <Button asChild className="mt-5" variant="outline">
               <a href={practice.website} target="_blank" rel="noreferrer">
                 <ExternalLink className="size-4" />
-                Practice website
+                Website
               </a>
             </Button>
           )}
@@ -159,11 +157,7 @@ function PublicBookingCalendar() {
     : undefined;
   const primaryLocation = selectedLocation ?? practice.locations[0];
   const mapQuery = `${primaryLocation.name} ${primaryLocation.address} ${primaryLocation.postcode}`;
-  const pastedMapUrl = primaryLocation.mapUrl?.trim();
-  const mapSrc =
-    pastedMapUrl && (pastedMapUrl.includes("/embed") || pastedMapUrl.includes("output=embed"))
-      ? pastedMapUrl
-      : `https://www.google.com/maps?q=${encodeURIComponent(pastedMapUrl || mapQuery)}&output=embed`;
+  const mapSrc = mapEmbedUrl(primaryLocation, mapQuery);
   const phoneHref = `tel:${practice.whatsapp.replace(/[^+0-9]/g, "")}`;
 
   const submitRequest = () => {
@@ -222,10 +216,6 @@ function PublicBookingCalendar() {
                 <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
                   {activeSettings.title || `${practice.tradingName} available locum shifts`}
                 </h1>
-                <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                  {activeSettings.intro ||
-                    "Pick an open date, check the shift details, then request the cover. The practice confirms before anything is booked."}
-                </p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {activeSettings.showPracticeWebsite && practice.website && (
                     <IconLink href={practice.website} label="Website" icon={Globe} external />
@@ -254,7 +244,8 @@ function PublicBookingCalendar() {
             </div>
 
             <div className="mt-5">
-              <RoleMultiSelect
+              <TagMultiSelect
+                label="Role"
                 roles={visibleRoles}
                 selectedRoles={selectedRoles}
                 onToggle={(item) =>
@@ -265,6 +256,7 @@ function PublicBookingCalendar() {
                   )
                 }
                 onClear={() => setSelectedRoles([])}
+                emptyLabel="All roles"
               />
             </div>
           </div>
@@ -323,20 +315,17 @@ function PublicBookingCalendar() {
               </div>
 
               <div className="mt-5 rounded-md bg-muted/40 p-3 text-sm text-muted-foreground">
-                Register and request this shift in one tap.
+                Register and request shift in one tap.
               </div>
               <Button className="mt-3 w-full" type="button" onClick={submitRequest}>
                 <Send className="size-4" />
-                Request with my profile
+                Request
               </Button>
             </>
           ) : (
             <div className="py-12 text-center">
               <CalendarDays className="mx-auto size-8 text-muted-foreground" />
-              <h2 className="mt-3 font-semibold">No open dates</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Try a different role, or ask the practice for their next availability window.
-              </p>
+              <h2 className="mt-3 font-semibold">No shifts</h2>
             </div>
           )}
 
@@ -377,70 +366,31 @@ function IconLink({
       rel={external ? "noreferrer" : undefined}
       aria-label={label}
       title={label}
-      className="inline-grid size-8 place-items-center rounded-md border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground"
+      className="inline-grid size-8 place-items-center rounded-md border bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
     >
       <Icon className="size-4" />
     </a>
   );
 }
 
-function RoleMultiSelect({
-  roles,
-  selectedRoles,
-  onToggle,
-  onClear,
-}: {
-  roles: Role[];
-  selectedRoles: Role[];
-  onToggle: (role: Role) => void;
-  onClear: () => void;
-}) {
-  return (
-    <div>
-      <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-        <ListFilter className="size-4 text-muted-foreground" />
-        Role
-      </div>
-      <div className="rounded-md border bg-background p-2">
-        <div className="flex min-h-8 flex-wrap items-center gap-1.5">
-          {selectedRoles.length === 0 ? (
-            <span className="px-1 text-sm text-muted-foreground">Empty</span>
-          ) : (
-            selectedRoles.map((item) => <RoleChip key={item} role={item} />)
-          )}
-          {selectedRoles.length > 0 && (
-            <button
-              type="button"
-              onClick={onClear}
-              className="ml-auto inline-grid size-6 place-items-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
-              aria-label="Clear roles"
-              title="Clear roles"
-            >
-              <X className="size-3.5" />
-            </button>
-          )}
-        </div>
-        <div className="mt-2 flex flex-wrap gap-1.5 border-t pt-2">
-          {roles.map((item) => {
-            const selected = selectedRoles.includes(item);
-            return (
-              <button
-                key={item}
-                type="button"
-                onClick={() => onToggle(item)}
-                className={cn(
-                  "inline-flex h-7 items-center rounded-md border px-1.5 transition-colors hover:bg-accent",
-                  selected ? "border-primary bg-primary/10" : "bg-background opacity-70",
-                )}
-              >
-                <RoleChip role={item} />
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
+function mapEmbedUrl(location: Practice["locations"][number], fallbackQuery: string) {
+  const trimmed = location.mapUrl?.trim();
+  if (trimmed?.includes("/embed") || trimmed?.includes("output=embed")) return trimmed;
+  if (typeof location.lat === "number" && typeof location.lng === "number") {
+    const lat = location.lat;
+    const lng = location.lng;
+    const bbox = [lng - 0.02, lat - 0.014, lng + 0.02, lat + 0.014].join("%2C");
+    return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lng}`;
+  }
+  if (!trimmed)
+    return `https://www.google.com/maps?q=${encodeURIComponent(fallbackQuery)}&output=embed`;
+  try {
+    const url = new URL(trimmed);
+    const query = url.searchParams.get("q") || url.searchParams.get("query") || fallbackQuery;
+    return `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
+  } catch {
+    return `https://www.google.com/maps?q=${encodeURIComponent(trimmed)}&output=embed`;
+  }
 }
 
 function CalendarPanel({
