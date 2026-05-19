@@ -403,7 +403,7 @@ export function MonthCalendar({
               type="button"
               onClick={() => onSelectDate(date)}
               className={cn(
-                "aspect-square rounded-md border p-1.5 text-left text-sm transition-colors hover:border-primary/60",
+                "flex aspect-square flex-col rounded-md border p-1.5 text-left text-sm transition-colors hover:border-primary/60",
                 selectedDate === date && "ring-2 ring-primary",
                 tone === "available" && "border-emerald-300 bg-emerald-50 text-emerald-950",
                 tone === "pending" && "border-amber-300 bg-amber-50 text-amber-950",
@@ -414,12 +414,47 @@ export function MonthCalendar({
               )}
             >
               <span className="font-medium">{Number(date.slice(-2))}</span>
+              {state && (
+                <span
+                  className={cn(
+                    "mt-auto flex w-full min-w-0 items-center gap-1 rounded-sm px-1 py-0.5 text-[10px] font-semibold leading-none",
+                    tone === "available" && "bg-emerald-100 text-emerald-900",
+                    tone === "pending" && "bg-amber-100 text-amber-900",
+                    tone === "confirmed" && "bg-blue-100 text-blue-900",
+                    tone === "done" && "bg-green-100 text-green-900",
+                    tone === "danger" && "bg-red-100 text-red-900",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "size-1.5 shrink-0 rounded-full",
+                      tone === "available" && "bg-emerald-500",
+                      tone === "pending" && "bg-amber-500",
+                      tone === "confirmed" && "bg-blue-500",
+                      tone === "done" && "bg-green-700",
+                      tone === "danger" && "bg-red-500",
+                    )}
+                  />
+                  <span className="truncate">{calendarStateLabel(state)}</span>
+                </span>
+              )}
             </button>
           );
         })}
       </div>
     </section>
   );
+}
+
+function calendarStateLabel(state: string) {
+  const text = state.toLowerCase();
+  if (text.includes("request") || text.includes("applicant")) return "Request";
+  if (text.includes("booked") || text.includes("confirmed")) return "Booked";
+  if (text.includes("completed") || text.includes("paid") || text.includes("approved")) {
+    return "Completed";
+  }
+  if (text.includes("cancel") || text.includes("declin")) return "Cancel";
+  return "Shift";
 }
 
 function ApplicantStats({ locum, className }: { locum: Locum; className?: string }) {

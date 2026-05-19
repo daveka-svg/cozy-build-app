@@ -3,7 +3,7 @@ import { Mail, MessageCircle, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ApplicationsModal } from "@/components/ApplicationsModal";
 import { PageHeader } from "@/components/AppShell";
-import { EmptyState, StatusChip, TagMultiSelect, fmtDate, fmtGBP } from "@/components/Bits";
+import { EmptyState, TagMultiSelect, fmtDate, fmtGBP } from "@/components/Bits";
 import { LocumIdentity } from "@/components/LocumIdentity";
 import { LocumProfileModal } from "@/components/LocumProfileModal";
 import { MonthCalendar, ShiftCard } from "@/components/PlacementUI";
@@ -94,7 +94,7 @@ function ShiftsPage() {
         </TabsContent>
 
         <TabsContent value="calendar" className="mt-4">
-          <CalendarView shifts={my} onOpen={setOpenShiftId} />
+          <CalendarView shifts={my} onOpen={setOpenShiftId} onProfile={setProfileLocumId} />
         </TabsContent>
       </Tabs>
 
@@ -157,12 +157,12 @@ function ShiftList({
               status={status}
               title={`${shift.start}-${shift.end}`}
               meta={
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span>
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">
                     {location?.name ?? "Location"}, {location?.postcode ?? ""}
                   </span>
                   {bookedLocum && (
-                    <span onClick={(event) => event.stopPropagation()}>
+                    <span className="pt-1" onClick={(event) => event.stopPropagation()}>
                       <LocumIdentity
                         locum={bookedLocum}
                         compact
@@ -235,7 +235,15 @@ function ShiftList({
   );
 }
 
-function CalendarView({ shifts, onOpen }: { shifts: Shift[]; onOpen: (id: string) => void }) {
+function CalendarView({
+  shifts,
+  onOpen,
+  onProfile,
+}: {
+  shifts: Shift[];
+  onOpen: (id: string) => void;
+  onProfile: (id: string) => void;
+}) {
   const [cursor, setCursor] = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   const dateStates = useMemo(() => {
@@ -288,21 +296,12 @@ function CalendarView({ shifts, onOpen }: { shifts: Shift[]; onOpen: (id: string
       <section className="rounded-lg border bg-card p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="font-semibold">{fmtDate(selectedDate)}</div>
-          <StatusChip status={`${selected.length} shift${selected.length === 1 ? "" : "s"}`} />
+          <div className="text-xs text-muted-foreground">
+            {selected.length} shift{selected.length === 1 ? "" : "s"}
+          </div>
         </div>
-        <div className="mt-3 space-y-2">
-          {selected.length === 0 && <EmptyState>No shifts.</EmptyState>}
-          {selected.map((shift) => (
-            <ShiftCard
-              key={shift.id}
-              date={shift.date}
-              role={shift.role}
-              status={shift.status === "New applicants" ? "requested" : shift.status}
-              title={`${shift.start}-${shift.end}`}
-              value={fmtGBP(calcShiftValue(shift))}
-              onClick={() => onOpen(shift.id)}
-            />
-          ))}
+        <div className="mt-3">
+          <ShiftList shifts={selected} onOpen={onOpen} onProfile={onProfile} />
         </div>
       </section>
     </div>
