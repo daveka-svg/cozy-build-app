@@ -290,17 +290,16 @@ function PublicBookingCalendar() {
                 {activeSettings.showRates ? (
                   <>
                     <InfoItem label="Rate" value={`${fmtGBP(highlightedShift.hourlyRate)}/hr`} />
-                    <InfoItem
-                      label="Estimated total"
-                      value={fmtGBP(calcShiftValue(highlightedShift))}
-                    />
+                    <InfoItem label="Total" value={fmtGBP(calcShiftValue(highlightedShift))} />
                   </>
                 ) : (
                   <InfoItem label="Rate" value="Shared after request" />
                 )}
                 <InfoItem
                   label="Lunch break"
-                  value={`${highlightedShift.lunchMinutes} min${highlightedShift.lunchPaid ? " paid" : ""}`}
+                  value={`${highlightedShift.lunchMinutes} min ${
+                    highlightedShift.lunchPaid ? "paid" : "unpaid"
+                  }`}
                 />
               </dl>
 

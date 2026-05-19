@@ -119,8 +119,8 @@ function HoursPage() {
   const approvedHours = my
     .filter((item) => item.timesheet.status === "Approved")
     .reduce((sum, item) => sum + calcTimesheetHours(item.timesheet, item.shift), 0);
-  const approvedValue = my
-    .filter((item) => item.timesheet.status === "Approved")
+  const toPayValue = my
+    .filter((item) => item.invoice?.status !== "Paid outside platform")
     .reduce((sum, item) => sum + calcTimesheetValue(item.timesheet, item.shift), 0);
 
   const approve = (timesheetId: string) => {
@@ -157,8 +157,8 @@ function HoursPage() {
           />
           <MetricPill
             icon={<WalletCards className="size-4" />}
-            label="Value"
-            value={fmtGBP(approvedValue)}
+            label="To pay"
+            value={fmtGBP(toPayValue)}
             main
           />
           <MetricPill icon={<ReceiptText className="size-4" />} label="Paid" value={paid.length} />
@@ -166,9 +166,9 @@ function HoursPage() {
 
         <Tabs defaultValue="submitted">
           <TabsList className="h-auto flex-wrap justify-start rounded-lg bg-card p-1">
-            <TabsTrigger value="submitted">Submitted {submitted.length}</TabsTrigger>
-            <TabsTrigger value="approved">Approved {approved.length}</TabsTrigger>
-            <TabsTrigger value="paid">Paid {paid.length}</TabsTrigger>
+            <TabsTrigger value="submitted">Submitted</TabsTrigger>
+            <TabsTrigger value="approved">Approved</TabsTrigger>
+            <TabsTrigger value="paid">Paid</TabsTrigger>
             <TabsTrigger value="locums">Locums</TabsTrigger>
           </TabsList>
 
