@@ -142,7 +142,12 @@ function ShiftList({
           const bookedLocum = booked && locums.find((locum) => locum.id === booked.locumId);
           const practice = practices.find((item) => item.id === shift.practiceId);
           const location = practice?.locations.find((item) => item.id === shift.locationId);
-          const status = requestCount > 0 && shift.status === "Open" ? "requested" : shift.status;
+          const status =
+            shift.status === "Open" || shift.status === "New applicants"
+              ? requestCount > 0
+                ? `${requestCount} Request${requestCount === 1 ? "" : "s"}`
+                : undefined
+              : shift.status;
 
           return (
             <ShiftCard
@@ -156,14 +161,6 @@ function ShiftList({
                   <span>
                     {location?.name ?? "Location"}, {location?.postcode ?? ""}
                   </span>
-                  <span>
-                    Lunch {shift.lunchMinutes}m{shift.lunchPaid ? " paid" : ""}
-                  </span>
-                  {requestCount > 0 && (
-                    <span className="font-medium text-primary">
-                      {requestCount} request{requestCount === 1 ? "" : "s"}
-                    </span>
-                  )}
                   {bookedLocum && (
                     <span onClick={(event) => event.stopPropagation()}>
                       <LocumIdentity
@@ -181,6 +178,9 @@ function ShiftList({
                   <div>{fmtGBP(calcShiftValue(shift))}</div>
                   <div className="text-xs font-normal text-muted-foreground">
                     {fmtGBP(shift.hourlyRate)}/hr
+                  </div>
+                  <div className="mt-1 text-xs font-normal text-muted-foreground">
+                    Lunch {shift.lunchMinutes}m {shift.lunchPaid ? "paid" : "unpaid"}
                   </div>
                 </>
               }
