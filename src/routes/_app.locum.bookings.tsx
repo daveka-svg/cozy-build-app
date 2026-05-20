@@ -370,11 +370,6 @@ function Bookings() {
             ? "Cancel this booking?"
             : "Withdraw this application?"
         }
-        description={
-          withdrawTarget
-            ? `${withdrawTarget.p.tradingName} will see the reason on their side of the workflow.`
-            : undefined
-        }
         confirmLabel={withdrawTarget?.a.status === "Booked" ? "Cancel booking" : "Withdraw"}
         destructive
         onOpenChange={(open) => !open && setWithdrawTarget(null)}
@@ -389,11 +384,6 @@ function Bookings() {
       <CancellationDialog
         open={!!declineTarget}
         title="Decline practice request?"
-        description={
-          declineTarget
-            ? `${declineTarget.practice.tradingName} will see this reason on the request.`
-            : undefined
-        }
         confirmLabel="Decline request"
         reasons={["Already booked", "Rate does not work", "Too far away", "Unavailable", "Other"]}
         destructive
@@ -497,11 +487,6 @@ function WorkItemCard({
               <span className="font-medium text-destructive">Cancellation reason:</span>{" "}
               {cancellation.reason}
               {cancellation.note ? ` - ${cancellation.note}` : ""}
-            </div>
-          )}
-          {a.status === "Booked" && (
-            <div className="mt-2 text-xs text-muted-foreground">
-              Docs stay private until you share them.
             </div>
           )}
         </div>
@@ -799,7 +784,6 @@ function TimesheetDialog({
             <Textarea
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
-              placeholder="Anything the practice should know before approving?"
             />
           </div>
         </div>
