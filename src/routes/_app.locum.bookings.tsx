@@ -701,7 +701,6 @@ function MonthPlanner({
             year: "numeric",
           })}
         </div>
-        <div className="text-xs text-muted-foreground">Select a day to see work details</div>
       </div>
       <div className="grid grid-cols-7 gap-1 text-center text-[11px] text-muted-foreground">
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
