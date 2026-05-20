@@ -48,6 +48,8 @@ export interface Locum {
   email: string;
   whatsapp: string;
   cvAttached: boolean;
+  cvText?: string;
+  cvFileName?: string;
   bio: string;
   experienceYears: number;
   hourlyRate: number;
@@ -59,7 +61,7 @@ export interface Locum {
   publicProfile?: LocumPublicProfileSettings;
   documents: {
     name: string;
-    status: "supplied" | "missing" | "expiring" | "verified";
+    status: "supplied" | "missing" | "expiring";
     kind?: AttachmentKind;
     required?: boolean;
     expiry?: string;
@@ -86,17 +88,34 @@ export interface Shift {
   createdAt: number;
 }
 
+export type ShiftUpdate = Partial<
+  Pick<
+    Shift,
+    | "practiceId"
+    | "locationId"
+    | "role"
+    | "date"
+    | "start"
+    | "end"
+    | "lunchMinutes"
+    | "lunchPaid"
+    | "hourlyRate"
+    | "positionsNeeded"
+    | "area"
+    | "notes"
+  >
+>;
+
 export interface Application {
   id: string;
   shiftId: string;
   locumId: string;
   status: AppStatus;
   applicantKind?: ApplicantKind;
-  guestApplicantId?: string;
   note?: string;
   internalNote?: string;
-  customAnswers?: Record<string, string>;
   attachmentIds?: string[];
+  docsSharedAt?: number;
   createdAt: number;
   updatedAt?: number;
 }
@@ -192,7 +211,7 @@ export type AttachmentKind =
   | "Timesheet evidence"
   | "Invoice PDF"
   | "Other";
-export type ApplicantKind = "registered" | "guest";
+export type ApplicantKind = "registered";
 
 export interface Attachment {
   id: string;
@@ -208,13 +227,6 @@ export interface Attachment {
   createdAt: number;
 }
 
-export interface PublicApplicationField {
-  id: string;
-  label: string;
-  required: boolean;
-  type: "text" | "textarea" | "url";
-}
-
 export interface PublicLinkSettings {
   enabled: boolean;
   slug: string;
@@ -223,9 +235,6 @@ export interface PublicLinkSettings {
   visibleRoles: Role[];
   showRates: boolean;
   showPracticeWebsite: boolean;
-  requirePhone: boolean;
-  requireCvLink: boolean;
-  customFields: PublicApplicationField[];
 }
 
 export interface LocumPublicProfileSettings {
@@ -233,7 +242,6 @@ export interface LocumPublicProfileSettings {
   slug: string;
   headline?: string;
   showRate: boolean;
-  showDocuments: boolean;
   showAvailability: boolean;
 }
 
@@ -246,16 +254,6 @@ export interface LocumAvailabilityWindow {
   note?: string;
   status?: "Available" | "Unavailable" | "Tentative";
   publicVisible: boolean;
-}
-
-export interface GuestApplicant {
-  id: string;
-  displayName: string;
-  email: string;
-  whatsapp: string;
-  role: Role;
-  cvUrl?: string;
-  createdAt: number;
 }
 
 export interface BookingRequest {
@@ -299,18 +297,6 @@ export interface CalendarSyncSettings {
   placeholderOnly: boolean;
 }
 
-export interface PublicShiftRequest {
-  shiftId: string;
-  practiceSlug: string;
-  displayName: string;
-  email: string;
-  whatsapp: string;
-  role: Role;
-  note?: string;
-  cvUrl?: string;
-  customAnswers?: Record<string, string>;
-}
-
 const today = new Date();
 const iso = (d: Date) => format(d, "yyyy-MM-dd");
 const publicPracticeLink = (slug: string, title: string, intro: string): PublicLinkSettings => ({
@@ -321,12 +307,6 @@ const publicPracticeLink = (slug: string, title: string, intro: string): PublicL
   visibleRoles: ["Vet", "Nurse", "Reception"],
   showRates: true,
   showPracticeWebsite: true,
-  requirePhone: true,
-  requireCvLink: false,
-  customFields: [
-    { id: "experience", label: "Relevant experience", required: false, type: "textarea" },
-    { id: "cv", label: "CV or profile link", required: false, type: "url" },
-  ],
 });
 
 const seedPractices: Practice[] = [
@@ -412,6 +392,9 @@ const seedLocums: Locum[] = [
     email: "aisha@example.com",
     whatsapp: "+447700900321",
     cvAttached: true,
+    cvFileName: "aisha-khan-cv.txt",
+    cvText:
+      "Small animal veterinary surgeon with seven years of first-opinion practice. Comfortable with consults, routine surgery, dental work, inpatient care, and calm client communication. Prefers clear handover notes and consult-only cover when sole charge is not required.",
     bio: "Small animal vet with surgery experience. Calm under pressure.",
     experienceYears: 7,
     hourlyRate: 65,
@@ -424,7 +407,6 @@ const seedLocums: Locum[] = [
       slug: "aisha-khan-vet",
       headline: "Reliable Bristol small animal vet cover",
       showRate: true,
-      showDocuments: true,
       showAvailability: true,
     },
     profilePhotos: [
@@ -440,7 +422,7 @@ const seedLocums: Locum[] = [
     documents: [
       {
         name: "CV",
-        status: "verified",
+        status: "supplied",
         kind: "CV",
         required: true,
         fileName: "aisha-khan-cv.pdf",
@@ -448,7 +430,7 @@ const seedLocums: Locum[] = [
       },
       {
         name: "Professional cover",
-        status: "verified",
+        status: "supplied",
         kind: "Insurance",
         required: true,
         expiry: "2026-12-31",
@@ -457,7 +439,7 @@ const seedLocums: Locum[] = [
       },
       {
         name: "Right to work",
-        status: "verified",
+        status: "supplied",
         kind: "Right to work",
         required: true,
         fileName: "right-to-work.pdf",
@@ -465,7 +447,7 @@ const seedLocums: Locum[] = [
       },
       {
         name: "RCVS certificate",
-        status: "verified",
+        status: "supplied",
         kind: "RCVS",
         required: true,
         expiry: "2027-03-31",
@@ -489,6 +471,9 @@ const seedLocums: Locum[] = [
     email: "tom@example.com",
     whatsapp: "+447700900432",
     cvAttached: true,
+    cvFileName: "tom-reilly-cv.txt",
+    cvText:
+      "Registered veterinary nurse with four years of locum and clinic experience. Strong in nurse clinics, anaesthesia support, inpatient care, and confident patient handovers.",
     bio: "RVN, strong in nurse clinics and consults.",
     experienceYears: 4,
     hourlyRate: 28,
@@ -500,7 +485,6 @@ const seedLocums: Locum[] = [
       slug: "tom-reilly-rvn",
       headline: "RVN locum cover for clinics and theatre support",
       showRate: true,
-      showDocuments: true,
       showAvailability: true,
     },
     profilePhotos: [
@@ -512,7 +496,7 @@ const seedLocums: Locum[] = [
     documents: [
       {
         name: "CV",
-        status: "verified",
+        status: "supplied",
         kind: "CV",
         required: true,
         fileName: "tom-reilly-cv.pdf",
@@ -520,7 +504,7 @@ const seedLocums: Locum[] = [
       },
       {
         name: "Insurance",
-        status: "verified",
+        status: "supplied",
         kind: "Insurance",
         required: true,
         expiry: "2026-10-15",
@@ -549,6 +533,9 @@ const seedLocums: Locum[] = [
     email: "maya@example.com",
     whatsapp: "+447700900543",
     cvAttached: true,
+    cvFileName: "maya-patel-cv.txt",
+    cvText:
+      "Veterinary care assistant and front-desk cover with six years of client care, phones, payments, waiting-room flow, and end-of-day handovers.",
     bio: "Friendly front desk. Phones, payments, busy waiting rooms.",
     experienceYears: 6,
     hourlyRate: 16,
@@ -560,7 +547,6 @@ const seedLocums: Locum[] = [
       slug: "maya-patel-reception",
       headline: "Experienced veterinary reception cover",
       showRate: true,
-      showDocuments: false,
       showAvailability: true,
     },
     profilePhotos: [
@@ -572,7 +558,7 @@ const seedLocums: Locum[] = [
     documents: [
       {
         name: "CV",
-        status: "verified",
+        status: "supplied",
         kind: "CV",
         required: true,
         fileName: "maya-patel-cv.pdf",
@@ -580,7 +566,7 @@ const seedLocums: Locum[] = [
       },
       {
         name: "Right to work",
-        status: "verified",
+        status: "supplied",
         kind: "Right to work",
         required: true,
         visibility: "private",
@@ -753,7 +739,7 @@ const seedTimesheets: Timesheet[] = [
     actualStart: "09:10",
     actualEnd: "17:05",
     lunchMinutes: 30,
-    notes: "Reception handover completed.",
+    notes: "VCA handover completed.",
     attachmentIds: [],
     status: "Submitted",
     submittedAt: Date.now() - 2 * 86400000,
@@ -898,7 +884,6 @@ interface State {
   timesheets: Timesheet[];
   invoices: Invoice[];
   attachments: Attachment[];
-  guestApplicants: GuestApplicant[];
   bookingRequests: BookingRequest[];
   cancellations: Cancellation[];
   locumAvailability: LocumAvailabilityWindow[];
@@ -917,16 +902,17 @@ interface State {
   addLocumAvailability: (input: Omit<LocumAvailabilityWindow, "id">) => LocumAvailabilityWindow;
   removeLocumAvailability: (id: string) => void;
   addShift: (s: Omit<Shift, "id" | "createdAt" | "status">) => Shift;
+  updateShift: (id: string, patch: ShiftUpdate) => void;
   cancelShift: (id: string, reason?: string, note?: string) => void;
   apply: (shiftId: string, locumId: string, note?: string) => void;
   applyToShift: (shiftId: string, locumId: string, note?: string) => void;
-  requestPublicShift: (request: PublicShiftRequest) => { ok: boolean; message: string };
   applyAsRegistered: (
     shiftId: string,
     locumId: string,
     note?: string,
     attachmentIds?: string[],
   ) => void;
+  shareApplicationDocuments: (appId: string) => void;
   withdraw: (appId: string, reason?: string, note?: string) => void;
   confirmBooking: (appId: string) => void;
   confirmApplication: (appId: string) => void;
@@ -971,7 +957,6 @@ export const useStore = create<State>((set, get) => ({
   timesheets: seedTimesheets,
   invoices: seedInvoices,
   attachments: seedAttachments,
-  guestApplicants: [],
   bookingRequests: [],
   cancellations: [],
   locumAvailability: seedAvailability,
@@ -1030,7 +1015,6 @@ export const useStore = create<State>((set, get) => ({
                   enabled: true,
                   slug: l.id,
                   showRate: true,
-                  showDocuments: true,
                   showAvailability: true,
                 }),
                 ...patch,
@@ -1051,6 +1035,25 @@ export const useStore = create<State>((set, get) => ({
     set({ shifts: [shift, ...get().shifts] });
     return shift;
   },
+  updateShift: (id, patch) =>
+    set({
+      shifts: get().shifts.map((shift) => (shift.id === id ? { ...shift, ...patch } : shift)),
+      bookings: get().bookings.map((booking) =>
+        booking.shiftId === id
+          ? {
+              ...booking,
+              practiceId: patch.practiceId ?? booking.practiceId,
+              locationId: patch.locationId ?? booking.locationId,
+              date: patch.date ?? booking.date,
+              start: patch.start ?? booking.start,
+              end: patch.end ?? booking.end,
+              lunchMinutes: patch.lunchMinutes ?? booking.lunchMinutes,
+              lunchPaid: patch.lunchPaid ?? booking.lunchPaid,
+              hourlyRate: patch.hourlyRate ?? booking.hourlyRate,
+            }
+          : booking,
+      ),
+    }),
   cancelShift: (id, reason = "Practice no longer needs cover", note) =>
     set({
       shifts: get().shifts.map((s) => (s.id === id ? { ...s, status: "Cancelled" } : s)),
@@ -1104,67 +1107,6 @@ export const useStore = create<State>((set, get) => ({
     set({ applications: [...state.applications, a], shifts });
   },
   applyToShift: (shiftId, locumId, note) => get().apply(shiftId, locumId, note),
-  requestPublicShift: (request) => {
-    const state = get();
-    const displayName = request.displayName.trim();
-    const normalizedEmail = request.email.trim().toLowerCase();
-    const whatsapp = request.whatsapp.trim();
-    const note = request.note?.trim();
-    const practice = state.practices.find((p) => p.shareSlug === request.practiceSlug);
-    const shift = state.shifts.find(
-      (s) => s.id === request.shiftId && s.practiceId === practice?.id,
-    );
-    const todayIso = new Date().toISOString().slice(0, 10);
-
-    if (!displayName || !normalizedEmail || !whatsapp) {
-      return { ok: false, message: "Add your name, email, and WhatsApp or phone number." };
-    }
-    if (!practice || !shift) {
-      return { ok: false, message: "This booking link is no longer available." };
-    }
-    if (shift.date < todayIso || !canRequestShift(shift.status)) {
-      return { ok: false, message: "That shift is not open for requests anymore." };
-    }
-    if (shift.role !== request.role) {
-      return { ok: false, message: `This shift needs a ${shift.role}.` };
-    }
-
-    const existingLocum = state.locums.find((l) => l.email.toLowerCase() === normalizedEmail);
-    if (!existingLocum) {
-      return { ok: false, message: "Register as a locum before requesting this shift." };
-    }
-    const applicantLocumId = existingLocum.id;
-
-    const alreadyRequested = state.applications.some(
-      (a) =>
-        a.shiftId === shift.id &&
-        a.locumId === applicantLocumId &&
-        (ACTIVE_APPLICATION_STATUSES.includes(a.status) || a.status === "Booked"),
-    );
-    if (alreadyRequested) {
-      return { ok: false, message: "You already requested this shift." };
-    }
-
-    const application: Application = {
-      id: `a${Date.now()}`,
-      shiftId: shift.id,
-      locumId: applicantLocumId,
-      status: "Applied",
-      applicantKind: "registered",
-      note,
-      customAnswers: request.customAnswers,
-      createdAt: Date.now(),
-    };
-
-    set({
-      applications: [...state.applications, application],
-      shifts: state.shifts.map((s) =>
-        s.id === shift.id && s.status === "Open" ? { ...s, status: "New applicants" } : s,
-      ),
-    });
-
-    return { ok: true, message: "Request sent. The practice can review and confirm it." };
-  },
   applyAsRegistered: (shiftId, locumId, note, attachmentIds) => {
     get().apply(shiftId, locumId, note);
     if (attachmentIds?.length) {
@@ -1179,6 +1121,18 @@ export const useStore = create<State>((set, get) => ({
         });
       }
     }
+  },
+  shareApplicationDocuments: (appId) => {
+    const state = get();
+    const app = state.applications.find((application) => application.id === appId);
+    if (!app || app.status !== "Booked") return;
+    set({
+      applications: state.applications.map((application) =>
+        application.id === appId
+          ? { ...application, docsSharedAt: Date.now(), updatedAt: Date.now() }
+          : application,
+      ),
+    });
   },
   withdraw: (appId, reason = "Locum unavailable", note) => {
     const state = get();

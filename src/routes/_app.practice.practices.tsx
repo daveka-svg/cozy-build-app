@@ -90,24 +90,30 @@ function BrandingEditor({
 
       <div className="mt-3 overflow-hidden rounded-lg border bg-card">
         <div
-          className="h-28 bg-muted bg-cover bg-center"
+          className="h-36 bg-muted bg-cover bg-center"
           style={practice.coverUrl ? { backgroundImage: `url(${practice.coverUrl})` } : undefined}
         />
-        <div className="-mt-8 flex items-end gap-3 px-4 pb-4">
-          <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full border-4 border-card bg-primary text-lg font-semibold text-primary-foreground">
-            {practice.logoUrl ? (
-              <img
-                src={practice.logoUrl}
-                alt={`${practice.tradingName} logo`}
-                className="size-full object-cover"
-              />
-            ) : (
-              initials
-            )}
-          </div>
-          <div className="min-w-0 pb-1">
-            <div className="truncate font-semibold">{practice.tradingName}</div>
-            <div className="text-xs text-muted-foreground">{practice.locations[0]?.postcode}</div>
+        <div className="px-4 pb-4">
+          <div className="-mt-10 flex items-start gap-3">
+            <div className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-full border-4 border-card bg-primary text-lg font-semibold text-primary-foreground">
+              {practice.logoUrl ? (
+                <img
+                  src={practice.logoUrl}
+                  alt={`${practice.tradingName} logo`}
+                  className="size-full object-cover"
+                />
+              ) : (
+                initials
+              )}
+            </div>
+            <div className="min-w-0 pt-11">
+              <div className="truncate text-lg font-semibold leading-tight">
+                {practice.tradingName}
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                {practice.locations[0]?.postcode}
+              </div>
+            </div>
           </div>
         </div>
       </div>

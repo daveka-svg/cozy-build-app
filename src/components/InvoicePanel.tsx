@@ -1,4 +1,4 @@
-import { CheckCircle2, FileText, ReceiptText, Send } from "lucide-react";
+import { FileText, ReceiptText, Send, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fmtGBP } from "@/components/Bits";
 import type { Invoice, Shift, Timesheet } from "@/lib/store";
@@ -52,17 +52,55 @@ export function InvoicePanel({
 
   const hours = invoice?.hours ?? calcTimesheetHours(timesheet, shift);
   const total = invoice?.total ?? calcTimesheetValue(timesheet, shift);
+  const invoiceLabel = invoice?.number ?? "Invoice";
+  const shareText = [
+    invoiceLabel,
+    locumName && practiceName
+      ? `${locumName} to ${practiceName}`
+      : locumName || practiceName || undefined,
+    `Hours: ${hours.toFixed(2)}`,
+    `Rate: ${fmtGBP(shift.hourlyRate)}/hr`,
+    `Total: ${fmtGBP(total)}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const shareInvoice = async () => {
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({ title: invoiceLabel, text: shareText });
+        return;
+      }
+
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(shareText);
+      }
+    } catch {
+      // Native share is commonly cancelled by the user; no follow-up UI needed here.
+    }
+  };
 
   return (
     <section className="rounded-lg border bg-card p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div className="flex items-center gap-2 font-medium">
-            <ReceiptText className="size-4 text-primary" />
-            Invoice
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            Generated from approved worked hours, not the planned shift value.
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 font-medium">
+              <ReceiptText className="size-4 text-primary" />
+              Invoice
+            </div>
+            {showActions && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-xs"
+                onClick={() => void shareInvoice()}
+              >
+                <Share2 className="size-3.5" />
+                Share
+              </Button>
+            )}
           </div>
           {(practiceName || locumName) && (
             <div className="mt-2 text-xs text-muted-foreground">
@@ -101,19 +139,13 @@ export function InvoicePanel({
           </div>
           <div className="rounded-md border p-2">
             <div className="text-xs text-muted-foreground">Invoice number</div>
-            <div>{invoice?.number ?? "Create draft after approval"}</div>
+            <div>{invoice?.number ?? "Pending"}</div>
           </div>
         </div>
       )}
 
       {showActions && (
         <div className="mt-3 flex flex-wrap gap-2">
-          {timesheet.status !== "Approved" && (
-            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-              <CheckCircle2 className="size-3" />
-              Invoice unlocks once hours are approved.
-            </span>
-          )}
           {timesheet.status === "Approved" && !invoice && onCreateDraft && (
             <Button size="sm" onClick={onCreateDraft}>
               <FileText className="size-4" />

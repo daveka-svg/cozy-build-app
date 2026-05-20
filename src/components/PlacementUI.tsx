@@ -1,9 +1,17 @@
 import { useMemo, type ReactNode } from "react";
-import { BadgeCheck, Check, ChevronLeft, MessageCircle, Pencil, Star } from "lucide-react";
+import { Check, ChevronLeft, MessageCircle, Pencil, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DateBlock, RoleChip, StatusChip, fmtDate, fmtGBP, statusIntent } from "@/components/Bits";
+import {
+  DateBlock,
+  RoleChip,
+  StatusChip,
+  fmtDate,
+  fmtGBP,
+  roleLabel,
+  statusIntent,
+} from "@/components/Bits";
 import {
   calcShiftValue,
   type Application,
@@ -17,6 +25,18 @@ type PracticeLocation = Practice["locations"][number];
 
 const shouldShowStatusChip = (status?: string | null) =>
   typeof status === "string" && !["Open", "open", "Shift", "shift"].includes(status);
+
+export type CalendarDayItem = {
+  role: Shift["role"];
+  status: string;
+  requestCount?: number;
+  shiftCount: number;
+};
+
+export type CalendarDaySummary = {
+  total: number;
+  items: CalendarDayItem[];
+};
 
 export type PipelineTab = {
   value: string;
@@ -68,7 +88,7 @@ export function PlacementHeader({
           </div>
           <h2 className="mt-3 text-3xl font-semibold leading-tight">{fmtDate(shift.date)}</h2>
           <div className="mt-1 text-sm text-muted-foreground">
-            {fmtGBP(shift.hourlyRate)} per hour - {shift.role === "Reception" ? "VCA" : shift.role}
+            {fmtGBP(shift.hourlyRate)} per hour - {roleLabel[shift.role]}
           </div>
           <div className="mt-2 text-sm text-muted-foreground">
             {shift.start}-{shift.end} - {location.name}, {location.postcode}
@@ -155,6 +175,8 @@ export function ApplicantDetailModal({
   onReject,
   onNegotiate,
   onAccept,
+  documentsVisible = false,
+  documentsSharedAt,
   acceptLabel = "Accept",
 }: {
   locum: Locum;
@@ -164,11 +186,16 @@ export function ApplicantDetailModal({
   onReject?: () => void;
   onNegotiate?: () => void;
   onAccept?: () => void;
+  documentsVisible?: boolean;
+  documentsSharedAt?: number;
   acceptLabel?: string;
 }) {
-  const verifiedDocs = locum.documents.filter(
-    (document) => document.status === "verified" || document.status === "supplied",
-  );
+  const sharedAt = documentsSharedAt
+    ? new Date(documentsSharedAt).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+      })
+    : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -187,10 +214,7 @@ export function ApplicantDetailModal({
                 </div>
                 <ApplicantStats locum={locum} className="mt-2" />
               </div>
-              <StatusChip
-                status={locum.rcvs ? "verified" : "supplied"}
-                icon={<BadgeCheck className="size-3" />}
-              />
+              <StatusChip status={documentsVisible ? "Docs shared" : "Docs private"} />
             </div>
           </div>
 
@@ -238,30 +262,68 @@ export function ApplicantDetailModal({
                 </div>
               </section>
               <section>
-                <div className="text-sm font-medium text-muted-foreground">Documents</div>
-                <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                  {verifiedDocs.map((document) => (
-                    <div key={document.name} className="rounded-md border bg-card p-3 text-sm">
-                      <div className="font-medium">{document.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {document.fileName ?? document.kind ?? "Document"}
-                      </div>
-                    </div>
-                  ))}
+                <div className="rounded-md border bg-muted/30 p-3 text-sm">
+                  Docs stay private until a shift is booked and the locum taps Share docs.
+                  {sharedAt ? ` Shared ${sharedAt}.` : ""}
                 </div>
+                {documentsVisible ? (
+                  <div className="mt-3 grid gap-3">
+                    <div className="rounded-md border bg-card p-3 text-sm">
+                      <div className="font-medium">CV</div>
+                      <div className="mt-1 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
+                        {locum.cvText ?? "CV text file attached."}
+                      </div>
+                      {locum.cvFileName && (
+                        <div className="mt-2 text-xs text-muted-foreground">{locum.cvFileName}</div>
+                      )}
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {locum.documents.map((document) => (
+                        <div key={document.name} className="rounded-md border bg-card p-3 text-sm">
+                          <div className="font-medium">{document.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {document.fileName ?? document.kind ?? "Document"}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </section>
             </TabsContent>
 
             <TabsContent value="shifts" className="pt-4">
-              <div className="rounded-lg border bg-card p-4 text-sm">
-                {locum.completedShifts} completed shifts. Current application{" "}
-                {application ? `#${application.id}` : "ready for review"}.
+              <div className="grid gap-2">
+                {appliedShiftRows(locum, application).map((row) => (
+                  <div
+                    key={row.label}
+                    className="flex items-center justify-between gap-3 rounded-md border bg-card p-3 text-sm"
+                  >
+                    <div>
+                      <div className="font-medium">{row.label}</div>
+                      <div className="text-xs text-muted-foreground">{row.detail}</div>
+                    </div>
+                    <StatusChip status={row.status} />
+                  </div>
+                ))}
               </div>
             </TabsContent>
 
             <TabsContent value="reviews" className="pt-4">
-              <div className="rounded-lg border bg-card p-4 text-sm">
-                {locum.rating.toFixed(1)} rating from practice feedback.
+              <div className="grid gap-2">
+                {reviewRows(locum).map((review) => (
+                  <div key={review.practice} className="rounded-md border bg-card p-3 text-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="font-medium">{review.practice}</div>
+                      <div className="inline-flex items-center gap-0.5 text-amber-500">
+                        {Array.from({ length: review.stars }, (_, index) => (
+                          <Star key={index} className="size-3 fill-current" />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="mt-1 text-muted-foreground">{review.text}</p>
+                  </div>
+                ))}
               </div>
             </TabsContent>
           </Tabs>
@@ -358,12 +420,12 @@ export function WorkCard({ children, className }: { children: ReactNode; classNa
 export function MonthCalendar({
   month,
   selectedDate,
-  dateStates,
+  dateSummaries,
   onSelectDate,
 }: {
   month: Date;
   selectedDate?: string;
-  dateStates: Map<string, string>;
+  dateSummaries: Map<string, CalendarDaySummary>;
   onSelectDate: (date: string) => void;
 }) {
   const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
@@ -385,80 +447,113 @@ export function MonthCalendar({
       <div className="mb-3 text-center font-semibold">
         {month.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
       </div>
-      <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium uppercase text-muted-foreground">
-        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
-          <div key={day} className="py-1">
-            {day}
+      <div className="overflow-x-auto pb-1">
+        <div className="min-w-[42rem]">
+          <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium uppercase text-muted-foreground">
+            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+              <div key={day} className="py-1">
+                {day}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      <div className="mt-1 grid grid-cols-7 gap-1">
-        {cells.map((date, index) => {
-          if (!date) return <div key={`blank-${index}`} className="aspect-square" />;
-          const state = dateStates.get(date);
-          const tone = state ? statusIntent(state) : "neutral";
-          return (
-            <button
-              key={date}
-              type="button"
-              onClick={() => onSelectDate(date)}
-              className={cn(
-                "flex aspect-square flex-col rounded-md border p-1.5 text-left text-sm transition-colors hover:border-primary/60",
-                selectedDate === date && "ring-2 ring-primary",
-                tone === "available" && "border-emerald-300 bg-emerald-50 text-emerald-950",
-                tone === "pending" && "border-amber-300 bg-amber-50 text-amber-950",
-                tone === "confirmed" && "border-blue-300 bg-blue-50 text-blue-950",
-                tone === "done" && "border-green-300 bg-green-50 text-green-950",
-                tone === "danger" && "border-red-300 bg-red-50 text-red-950",
-                !state && "bg-background",
-              )}
-            >
-              <span className="font-medium">{Number(date.slice(-2))}</span>
-              {state && (
-                <span
+          <div className="mt-1 grid grid-cols-7 gap-1">
+            {cells.map((date, index) => {
+              if (!date) return <div key={`blank-${index}`} className="min-h-24" />;
+              const summary = dateSummaries.get(date);
+              const visibleItems = summary?.items.slice(0, 3) ?? [];
+              const hiddenCount = Math.max(0, (summary?.items.length ?? 0) - visibleItems.length);
+              return (
+                <button
+                  key={date}
+                  type="button"
+                  onClick={() => onSelectDate(date)}
                   className={cn(
-                    "mt-auto flex w-full min-w-0 items-center gap-1 rounded-sm px-1 py-0.5 text-[10px] font-semibold leading-none",
-                    tone === "available" && "bg-emerald-100 text-emerald-900",
-                    tone === "pending" && "bg-amber-100 text-amber-900",
-                    tone === "confirmed" && "bg-blue-100 text-blue-900",
-                    tone === "done" && "bg-green-100 text-green-900",
-                    tone === "danger" && "bg-red-100 text-red-900",
+                    "flex min-h-24 flex-col rounded-md border bg-background p-1.5 text-left text-sm transition-colors hover:border-primary/60 hover:bg-accent/20",
+                    summary && "border-stone-200 bg-white",
+                    selectedDate === date && "ring-2 ring-primary ring-offset-1",
                   )}
                 >
-                  <span
-                    className={cn(
-                      "size-1.5 shrink-0 rounded-full",
-                      tone === "available" && "bg-emerald-500",
-                      tone === "pending" && "bg-amber-500",
-                      tone === "confirmed" && "bg-blue-500",
-                      tone === "done" && "bg-green-700",
-                      tone === "danger" && "bg-red-500",
+                  <span className="flex items-start justify-between gap-2">
+                    <span className="font-medium">{Number(date.slice(-2))}</span>
+                    {summary && (
+                      <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold leading-none text-muted-foreground">
+                        {summary.total}
+                      </span>
                     )}
-                  />
-                  <span className="truncate">{calendarStateLabel(state)}</span>
-                </span>
-              )}
-            </button>
-          );
-        })}
+                  </span>
+                  {summary && (
+                    <span className="mt-auto grid gap-1">
+                      {visibleItems.map((item) => (
+                        <CalendarDayBadge
+                          key={`${date}-${item.role}-${item.status}-${item.requestCount ?? 0}`}
+                          item={item}
+                        />
+                      ))}
+                      {hiddenCount > 0 && (
+                        <span className="rounded-sm bg-muted px-1 py-0.5 text-[10px] font-semibold leading-none text-muted-foreground">
+                          +{hiddenCount} more
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </section>
   );
 }
 
-function calendarStateLabel(state: string) {
-  const text = state.toLowerCase();
-  if (text.includes("request") || text.includes("applicant")) return "Request";
+function CalendarDayBadge({ item }: { item: CalendarDayItem }) {
+  const tone = statusIntent(item.requestCount ? "Requested" : item.status);
+
+  return (
+    <span
+      className={cn(
+        "flex min-w-0 items-center gap-1 rounded-sm border px-1 py-0.5 text-[10px] font-semibold leading-none",
+        calendarToneClass(tone),
+      )}
+    >
+      <span className={cn("size-1.5 shrink-0 rounded-full", calendarRoleDot[item.role])} />
+      <span className="shrink-0">{roleLabel[item.role]}</span>
+      <span className="truncate">{calendarItemLabel(item)}</span>
+      {item.shiftCount > 1 && <span className="shrink-0">x{item.shiftCount}</span>}
+    </span>
+  );
+}
+
+function calendarItemLabel(item: CalendarDayItem) {
+  if (item.requestCount) {
+    return `${item.requestCount} Request${item.requestCount === 1 ? "" : "s"}`;
+  }
+
+  const text = item.status.toLowerCase();
   if (text.includes("booked") || text.includes("confirmed")) return "Booked";
   if (text.includes("completed") || text.includes("paid") || text.includes("approved")) {
     return "Completed";
   }
-  if (text.includes("cancel") || text.includes("declin")) return "Cancel";
-  return "Shift";
+  if (text.includes("cancel") || text.includes("declin")) return "Cancelled";
+  return "Open";
 }
 
+function calendarToneClass(tone: ReturnType<typeof statusIntent>) {
+  if (tone === "available") return "border-emerald-200 bg-emerald-50 text-emerald-900";
+  if (tone === "pending") return "border-amber-200 bg-amber-50 text-amber-900";
+  if (tone === "confirmed") return "border-blue-200 bg-blue-50 text-blue-900";
+  if (tone === "done") return "border-green-200 bg-green-50 text-green-900";
+  if (tone === "danger") return "border-red-200 bg-red-50 text-red-800";
+  return "border-stone-200 bg-stone-50 text-stone-700";
+}
+
+const calendarRoleDot: Record<Shift["role"], string> = {
+  Vet: "bg-pink-400",
+  Nurse: "bg-stone-400",
+  Reception: "bg-orange-400",
+};
+
 function ApplicantStats({ locum, className }: { locum: Locum; className?: string }) {
-  const reliability = Math.min(100, Math.max(0, Math.round((locum.rating / 5) * 100)));
   return (
     <div
       className={cn(
@@ -467,18 +562,43 @@ function ApplicantStats({ locum, className }: { locum: Locum; className?: string
       )}
     >
       <span>
-        <strong className="text-foreground">{reliability}%</strong> Reliability
-      </span>
-      <span>
         <strong className="text-foreground">{locum.completedShifts}</strong> shifts
       </span>
-      <span className="inline-flex items-center gap-1">
-        <strong className="text-foreground">{locum.rating.toFixed(1)}</strong>
-        <Star className="size-4 fill-amber-400 text-amber-400" />
-      </span>
       <span>{locum.experienceYears} years</span>
+      <span>{fmtGBP(locum.hourlyRate)}/hr</span>
     </div>
   );
+}
+
+function appliedShiftRows(locum: Locum, application?: Application) {
+  return [
+    {
+      label: "Current shift",
+      detail: application ? `Application ${application.id.toUpperCase()}` : "Ready to review",
+      status:
+        application?.status === "Not selected" ? "Declined" : (application?.status ?? "Applied"),
+    },
+    {
+      label: "Recent cover",
+      detail: `${locum.completedShifts} completed shifts`,
+      status: "Completed",
+    },
+  ];
+}
+
+function reviewRows(locum: Locum) {
+  return [
+    {
+      practice: "Riverside Vets",
+      stars: 5,
+      text: `${locum.displayName.split(" ")[0]} kept the day moving and left clear handover notes.`,
+    },
+    {
+      practice: "Oakfield Animal Hospital",
+      stars: 4,
+      text: "Calm with the team, punctual, and easy to book again.",
+    },
+  ];
 }
 
 function Avatar({ locum, large }: { locum: Locum; large?: boolean }) {

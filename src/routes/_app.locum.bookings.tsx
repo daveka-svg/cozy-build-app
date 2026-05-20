@@ -4,7 +4,6 @@ import {
   calcShiftValue,
   useStore,
   type Application,
-  type Attachment,
   type BookingRequest,
   type Invoice,
   type Practice,
@@ -33,6 +32,7 @@ import {
   CalendarPlus,
   Check,
   Clock,
+  FileCheck2,
   FileText,
   Hourglass,
   Mail,
@@ -75,8 +75,6 @@ type TimesheetForm = {
   lunchMinutes: number;
   expense?: string;
   notes?: string;
-  evidenceName?: string;
-  evidenceUrl?: string;
 };
 
 function calcTimesheetHours(
@@ -109,12 +107,10 @@ function Bookings() {
     createInvoiceDraftFromTimesheet,
     issueInvoice,
     invoices,
-    attachments,
     bookingRequests,
     acceptBookingRequest,
     declineBookingRequest,
     cancellations,
-    addAttachment,
   } = useStore();
   const [tsShiftId, setTsShiftId] = useState<string | null>(null);
   const [withdrawTarget, setWithdrawTarget] = useState<WorkItem | null>(null);
@@ -201,27 +197,7 @@ function Bookings() {
   };
 
   const submitHours = (form: TimesheetForm) => {
-    const { evidenceName, evidenceUrl, ...timesheet } = form;
-    submitTimesheet(timesheet);
-    const created = useStore
-      .getState()
-      .timesheets.filter(
-        (entry) => entry.shiftId === form.shiftId && entry.locumId === form.locumId,
-      )
-      .sort((left, right) => (right.submittedAt ?? 0) - (left.submittedAt ?? 0))[0];
-
-    if (created && evidenceName?.trim()) {
-      addAttachment({
-        ownerType: "timesheet",
-        ownerId: created.id,
-        name: evidenceName.trim(),
-        kind: "Timesheet evidence",
-        url: evidenceUrl?.trim() || undefined,
-        uploadedByRole: "locum",
-        uploadedById: currentLocumId,
-      });
-    }
-
+    submitTimesheet(form);
     toast.success("Timesheet submitted");
     setTsShiftId(null);
   };
@@ -301,7 +277,6 @@ function Bookings() {
                     <WorkItemCard
                       key={item.a.id}
                       item={item}
-                      attachments={attachments}
                       cancellations={cancellations}
                       onDownloadIcs={downloadIcs}
                       onSubmitTimesheet={setTsShiftId}
@@ -323,7 +298,6 @@ function Bookings() {
           <WorkList
             empty="No confirmed upcoming bookings."
             items={upcoming}
-            attachments={attachments}
             cancellations={cancellations}
             onDownloadIcs={downloadIcs}
             onSubmitTimesheet={setTsShiftId}
@@ -340,7 +314,6 @@ function Bookings() {
           <WorkList
             empty="No active applications."
             items={activeApplications}
-            attachments={attachments}
             cancellations={cancellations}
             onDownloadIcs={downloadIcs}
             onSubmitTimesheet={setTsShiftId}
@@ -368,7 +341,6 @@ function Bookings() {
           <WorkList
             empty="No past work or cancelled applications yet."
             items={history}
-            attachments={attachments}
             cancellations={cancellations}
             onDownloadIcs={downloadIcs}
             onSubmitTimesheet={setTsShiftId}
@@ -440,7 +412,6 @@ function Bookings() {
 function WorkList({
   empty,
   items,
-  attachments,
   cancellations,
   onDownloadIcs,
   onSubmitTimesheet,
@@ -450,7 +421,6 @@ function WorkList({
 }: {
   empty: string;
   items: WorkItem[];
-  attachments: Attachment[];
   cancellations: { ownerType: string; ownerId: string; reason: string; note?: string }[];
   onDownloadIcs: (shiftId: string) => void;
   onSubmitTimesheet: (shiftId: string) => void;
@@ -472,7 +442,6 @@ function WorkList({
         <WorkItemCard
           key={item.a.id}
           item={item}
-          attachments={attachments}
           cancellations={cancellations}
           onDownloadIcs={onDownloadIcs}
           onSubmitTimesheet={onSubmitTimesheet}
@@ -487,7 +456,6 @@ function WorkList({
 
 function WorkItemCard({
   item,
-  attachments,
   cancellations,
   onDownloadIcs,
   onSubmitTimesheet,
@@ -496,7 +464,6 @@ function WorkItemCard({
   onWithdraw,
 }: {
   item: WorkItem;
-  attachments: Attachment[];
   cancellations: { ownerType: string; ownerId: string; reason: string; note?: string }[];
   onDownloadIcs: (shiftId: string) => void;
   onSubmitTimesheet: (shiftId: string) => void;
@@ -505,15 +472,11 @@ function WorkItemCard({
   onWithdraw: (item: WorkItem) => void;
 }) {
   const { a, s, p, loc, ts, inv } = item;
+  const shareApplicationDocuments = useStore((state) => state.shareApplicationDocuments);
   const isPast = s.date < new Date().toISOString().slice(0, 10);
   const cancellation = cancellations.find(
     (entry) => entry.ownerType === "application" && entry.ownerId === a.id,
   );
-  const evidence = ts
-    ? attachments.filter(
-        (attachment) => attachment.ownerType === "timesheet" && attachment.ownerId === ts.id,
-      )
-    : [];
 
   return (
     <div className="rounded-lg border bg-card p-4">
@@ -534,6 +497,11 @@ function WorkItemCard({
               <span className="font-medium text-destructive">Cancellation reason:</span>{" "}
               {cancellation.reason}
               {cancellation.note ? ` - ${cancellation.note}` : ""}
+            </div>
+          )}
+          {a.status === "Booked" && (
+            <div className="mt-2 text-xs text-muted-foreground">
+              Docs stay private until you share them.
             </div>
           )}
         </div>
@@ -567,6 +535,18 @@ function WorkItemCard({
                 <Mail className="size-4" />
                 Email
               </a>
+            </Button>
+            <Button
+              size="sm"
+              variant={a.docsSharedAt ? "outline" : "secondary"}
+              onClick={() => {
+                shareApplicationDocuments(a.id);
+                toast.success("Docs shared");
+              }}
+              disabled={Boolean(a.docsSharedAt)}
+            >
+              <FileCheck2 className="size-4" />
+              {a.docsSharedAt ? "Docs shared" : "Share docs"}
             </Button>
             {s.date >= new Date().toISOString().slice(0, 10) && (
               <>
@@ -609,7 +589,7 @@ function WorkItemCard({
       </div>
 
       {(ts || inv) && (
-        <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_0.85fr]">
+        <div className="mt-3">
           <InvoicePanel
             compact
             timesheet={ts}
@@ -620,7 +600,6 @@ function WorkItemCard({
             onCreateDraft={ts ? () => onCreateDraft(ts.id) : undefined}
             onIssue={inv ? () => onIssueInvoice(inv.id) : undefined}
           />
-          {evidence.length > 0 && <EvidenceList attachments={evidence} empty="No evidence." />}
         </div>
       )}
     </div>
@@ -771,43 +750,6 @@ function MonthPlanner({
   );
 }
 
-function EvidenceList({ attachments, empty }: { attachments: Attachment[]; empty: string }) {
-  return (
-    <section className="rounded-lg border bg-card p-4">
-      <div className="flex items-center gap-2 font-medium">
-        <FileText className="size-4 text-primary" />
-        Evidence
-      </div>
-      <div className="mt-3 space-y-2">
-        {attachments.length === 0 ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            {empty}
-          </div>
-        ) : (
-          attachments.map((attachment) => (
-            <div
-              key={attachment.id}
-              className="flex items-center justify-between gap-3 rounded-md border p-2 text-sm"
-            >
-              <div className="min-w-0">
-                <div className="truncate font-medium">{attachment.name}</div>
-                <div className="text-xs text-muted-foreground">{attachment.kind}</div>
-              </div>
-              {attachment.url && (
-                <Button size="sm" variant="outline" asChild>
-                  <a href={attachment.url} target="_blank" rel="noreferrer">
-                    Open
-                  </a>
-                </Button>
-              )}
-            </div>
-          ))
-        )}
-      </div>
-    </section>
-  );
-}
-
 function TimesheetDialog({
   shiftId,
   locumId,
@@ -825,8 +767,6 @@ function TimesheetDialog({
   const [lunch, setLunch] = useState(s.lunchMinutes);
   const [expense, setExpense] = useState("");
   const [notes, setNotes] = useState("");
-  const [evidenceName, setEvidenceName] = useState("");
-  const [evidenceUrl, setEvidenceUrl] = useState("");
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -849,22 +789,6 @@ function TimesheetDialog({
               type="number"
               value={lunch}
               onChange={(event) => setLunch(Number(event.target.value))}
-            />
-          </div>
-          <div>
-            <Label>Evidence file name</Label>
-            <Input
-              value={evidenceName}
-              onChange={(event) => setEvidenceName(event.target.value)}
-              placeholder="Signed timesheet"
-            />
-          </div>
-          <div className="col-span-2">
-            <Label>Evidence link</Label>
-            <Input
-              value={evidenceUrl}
-              onChange={(event) => setEvidenceUrl(event.target.value)}
-              placeholder="https://drive.example/timesheet"
             />
           </div>
           <div className="col-span-2">
@@ -894,8 +818,6 @@ function TimesheetDialog({
                 lunchMinutes: lunch,
                 expense: expense.trim() || undefined,
                 notes: notes.trim() || undefined,
-                evidenceName,
-                evidenceUrl,
               })
             }
           >

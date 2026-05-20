@@ -1,15 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import {
-  ArrowLeft,
-  CalendarDays,
-  Clock,
-  Mail,
-  MapPin,
-  MessageCircle,
-  Send,
-  Star,
-} from "lucide-react";
+import { ArrowLeft, CalendarDays, Clock, Mail, MapPin, MessageCircle, Send } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DateBlock, RoleChip, fmtDate, fmtGBP } from "@/components/Bits";
@@ -140,10 +131,6 @@ function PublicLocumAvailability() {
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <RoleChip role={locum.role} />
-                  <span className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs">
-                    <Star className="size-3 text-primary" />
-                    {locum.rating.toFixed(1)}
-                  </span>
                 </div>
                 <h1 className="mt-2 text-2xl font-semibold">{locum.displayName}</h1>
                 <p className="mt-1 text-sm text-muted-foreground">

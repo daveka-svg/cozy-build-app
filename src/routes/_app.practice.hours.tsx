@@ -165,11 +165,19 @@ function HoursPage() {
         </div>
 
         <Tabs defaultValue="submitted">
-          <TabsList className="h-auto flex-wrap justify-start rounded-lg bg-card p-1">
-            <TabsTrigger value="submitted">Submitted</TabsTrigger>
-            <TabsTrigger value="approved">Approved</TabsTrigger>
-            <TabsTrigger value="paid">Paid</TabsTrigger>
-            <TabsTrigger value="locums">Locums</TabsTrigger>
+          <TabsList className="h-auto flex-wrap justify-start rounded-lg bg-card p-1 shadow-none">
+            <TabsTrigger value="submitted" className="shadow-none data-[state=active]:shadow-none">
+              Submitted
+            </TabsTrigger>
+            <TabsTrigger value="approved" className="shadow-none data-[state=active]:shadow-none">
+              Approved
+            </TabsTrigger>
+            <TabsTrigger value="paid" className="shadow-none data-[state=active]:shadow-none">
+              Paid
+            </TabsTrigger>
+            <TabsTrigger value="locums" className="shadow-none data-[state=active]:shadow-none">
+              Locums
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="submitted" className="mt-4">
@@ -350,7 +358,7 @@ function HoursTable({
               <TableHead>Role</TableHead>
               <TableHead>Time</TableHead>
               <TableHead className="text-right">Hours</TableHead>
-              <TableHead className="text-right">Total</TableHead>
+              <TableHead className="text-right">To pay</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -427,11 +435,14 @@ function HoursRow({
         <div>
           {timesheet.actualStart}-{timesheet.actualEnd}
         </div>
-        <div className="text-xs text-muted-foreground">Lunch {timesheet.lunchMinutes}m</div>
+        <div className="text-xs text-muted-foreground">Rate {fmtGBP(shift.hourlyRate)}/hr</div>
       </TableCell>
       <TableCell className="text-right tabular-nums">{hours.toFixed(2)}</TableCell>
-      <TableCell className="text-right text-base font-semibold tabular-nums">
-        {fmtGBP(total)}
+      <TableCell className="text-right tabular-nums">
+        <div className="text-base font-semibold">{fmtGBP(total)}</div>
+        <div className="text-xs font-normal text-muted-foreground">
+          Lunch {timesheet.lunchMinutes}m {shift.lunchPaid ? "paid" : "unpaid"}
+        </div>
       </TableCell>
       <TableCell>
         <div className="flex flex-wrap gap-1.5">
@@ -478,7 +489,12 @@ function HoursMobileCard({
     <article className="p-3">
       <div className="flex items-start justify-between gap-3">
         <PersonCell locum={locum} onProfile={onProfile} />
-        <div className="text-right text-lg font-semibold tabular-nums">{fmtGBP(total)}</div>
+        <div className="text-right tabular-nums">
+          <div className="text-lg font-semibold">{fmtGBP(total)}</div>
+          <div className="text-xs text-muted-foreground">
+            Lunch {timesheet.lunchMinutes}m {shift.lunchPaid ? "paid" : "unpaid"}
+          </div>
+        </div>
       </div>
       <div className="mt-3 flex flex-wrap gap-1.5">
         <RoleChip role={shift.role} />
@@ -490,6 +506,7 @@ function HoursMobileCard({
         <Fact label="Date" value={fmtDate(shift.date)} />
         <Fact label="Place" value={`${location.name}, ${location.postcode}`} />
         <Fact label="Time" value={`${timesheet.actualStart}-${timesheet.actualEnd}`} />
+        <Fact label="Rate" value={`${fmtGBP(shift.hourlyRate)}/hr`} />
         <Fact label="Hours" value={`${hours.toFixed(2)}h`} />
       </div>
       <RowActions

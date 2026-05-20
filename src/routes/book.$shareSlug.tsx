@@ -52,9 +52,6 @@ function fallbackSettings(practice: Practice): PublicLinkSettings {
     visibleRoles: roles,
     showRates: true,
     showPracticeWebsite: true,
-    requirePhone: true,
-    requireCvLink: false,
-    customFields: [],
   };
 }
 
@@ -180,7 +177,7 @@ function PublicBookingCalendar() {
       locum.id,
       `Requested from ${practice.tradingName} public calendar.`,
     );
-    setMessage({ tone: "ok", text: "Request sent with your platform profile." });
+    setMessage({ tone: "ok", text: "Request sent." });
   };
 
   const copyLink = () => {
@@ -190,9 +187,9 @@ function PublicBookingCalendar() {
   };
 
   return (
-    <main className="min-h-screen bg-background">
-      <header className="border-b bg-card/70 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
+    <main className="min-h-screen bg-stone-50/60">
+      <header className="border-b bg-background/85 backdrop-blur">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link to="/" className="inline-flex items-center gap-2 text-sm font-medium">
             <ArrowLeft className="size-4" />
             Every Tail Locums
@@ -204,25 +201,25 @@ function PublicBookingCalendar() {
         </div>
       </header>
 
-      <section className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1.1fr)_390px]">
-        <div className="space-y-5">
+      <section className="mx-auto grid max-w-6xl gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="space-y-4">
           <div className="overflow-hidden rounded-lg border bg-card">
             <div
-              className="h-32 bg-muted bg-cover bg-center sm:h-40"
+              className="h-28 bg-muted bg-cover bg-center sm:h-32"
               style={
                 practice.coverUrl ? { backgroundImage: `url(${practice.coverUrl})` } : undefined
               }
             />
-            <div className="px-5 pb-5">
-              <div className="-mt-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                <div className="flex min-w-0 items-end gap-3">
+            <div className="px-4 pb-4 sm:px-5">
+              <div className="-mt-9 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                <div className="flex min-w-0 items-start gap-3">
                   <PracticeAvatar practice={practice} />
-                  <div className="min-w-0 pb-1">
+                  <div className="min-w-0 pt-9 sm:pt-10">
                     <div className="inline-flex items-center gap-2 rounded-md border bg-background px-2.5 py-1 text-xs font-medium text-primary">
                       <CalendarDays className="size-3.5" />
                       Live
                     </div>
-                    <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+                    <h1 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">
                       {activeSettings.title || `${practice.tradingName} available locum shifts`}
                     </h1>
                     <div className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -233,7 +230,7 @@ function PublicBookingCalendar() {
                     </div>
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 lg:pb-2">
+                <div className="flex flex-wrap items-center gap-2 lg:pb-1">
                   {activeSettings.showPracticeWebsite && practice.website && (
                     <IconLink href={practice.website} label="Website" icon={Globe} external />
                   )}
@@ -242,12 +239,12 @@ function PublicBookingCalendar() {
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+              <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
                 <div className="overflow-hidden rounded-md border bg-muted/30">
                   <iframe
                     title={`${practice.tradingName} map`}
                     src={mapSrc}
-                    className="h-36 w-full border-0"
+                    className="h-32 w-full border-0"
                     loading="lazy"
                     referrerPolicy="no-referrer-when-downgrade"
                   />
@@ -287,18 +284,18 @@ function PublicBookingCalendar() {
           />
         </div>
 
-        <aside className="rounded-lg border bg-card p-5 lg:sticky lg:top-6 lg:self-start">
+        <aside className="rounded-lg border bg-card p-4 lg:sticky lg:top-4 lg:self-start">
           {highlightedShift ? (
             <>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <RoleChip role={highlightedShift.role} />
-                  <h2 className="mt-3 text-xl font-semibold">{fmtDate(highlightedShift.date)}</h2>
+                  <h2 className="mt-3 text-lg font-semibold">{fmtDate(highlightedShift.date)}</h2>
                   <p className="text-sm text-muted-foreground">{highlightedShift.area}</p>
                 </div>
               </div>
 
-              <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
+              <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
                 <InfoItem
                   label="Time"
                   value={`${highlightedShift.start}-${highlightedShift.end}`}
@@ -320,7 +317,7 @@ function PublicBookingCalendar() {
                 />
               </dl>
 
-              <div className="mt-4 rounded-md border bg-background p-3 text-sm">
+              <div className="mt-3 rounded-md border bg-background p-3 text-sm">
                 <div className="font-medium">{selectedLocation?.name}</div>
                 <div className="mt-1 text-muted-foreground">
                   {selectedLocation?.address}, {selectedLocation?.postcode}
@@ -330,7 +327,7 @@ function PublicBookingCalendar() {
                 )}
               </div>
 
-              <div className="mt-5 rounded-md bg-muted/40 p-3 text-sm text-muted-foreground">
+              <div className="mt-4 rounded-md bg-muted/40 p-3 text-sm text-muted-foreground">
                 Register and request shift in one tap.
               </div>
               <Button className="mt-3 w-full" type="button" onClick={submitRequest}>
@@ -398,7 +395,7 @@ function PracticeAvatar({ practice }: { practice: Practice }) {
     .toUpperCase();
 
   return (
-    <div className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-full border-4 border-card bg-primary text-xl font-semibold text-primary-foreground shadow-none">
+    <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full border-4 border-card bg-primary text-xl font-semibold text-primary-foreground shadow-none sm:size-20">
       {practice.logoUrl ? (
         <img
           src={practice.logoUrl}
@@ -460,8 +457,8 @@ function CalendarPanel({
   const today = format(new Date(), "yyyy-MM-dd");
 
   return (
-    <section className="rounded-lg border bg-card p-4">
-      <div className="mb-4 flex items-center justify-between">
+    <section className="rounded-lg border bg-card p-3 sm:p-4">
+      <div className="mb-3 flex items-center justify-between">
         <Button
           variant="outline"
           size="sm"
@@ -512,7 +509,7 @@ function CalendarPanel({
           );
         })}
       </div>
-      <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+      <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
         <span className="size-3 rounded-sm bg-emerald-100 border border-emerald-300" />
         Available
         <span className="ml-3 size-3 rounded-sm bg-muted border" />
@@ -532,7 +529,7 @@ function InfoItem({
   icon?: typeof Clock;
 }) {
   return (
-    <div className="rounded-md border bg-background p-3">
+    <div className="rounded-md border bg-background p-2.5">
       <dt className="flex items-center gap-1 text-xs text-muted-foreground">
         {Icon && <Icon className="size-3" />}
         {label}

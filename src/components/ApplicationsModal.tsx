@@ -13,7 +13,15 @@ import {
   type PipelineTab,
 } from "@/components/PlacementUI";
 
-export function ApplicationsModal({ shiftId, onClose }: { shiftId: string; onClose: () => void }) {
+export function ApplicationsModal({
+  shiftId,
+  onClose,
+  onEditShift,
+}: {
+  shiftId: string;
+  onClose: () => void;
+  onEditShift?: (shiftId: string) => void;
+}) {
   const {
     shifts,
     practices,
@@ -50,6 +58,9 @@ export function ApplicationsModal({ shiftId, onClose }: { shiftId: string; onClo
   );
   const selected = rows.find(({ application }) => application.id === selectedApplicationId);
   const positionsLeft = shift.positionsNeeded - confirmed.length - completed.length;
+  const today = new Date().toISOString().slice(0, 10);
+  const canEditShift =
+    shift.date >= today && shift.status !== "Completed" && shift.status !== "Cancelled";
   const initialTab =
     requested.length > 0
       ? "requested"
@@ -106,6 +117,7 @@ export function ApplicationsModal({ shiftId, onClose }: { shiftId: string; onClo
               location={location}
               title={`${practice.tradingName} placement`}
               onBack={onClose}
+              onEdit={canEditShift && onEditShift ? () => onEditShift(shift.id) : undefined}
             />
           </DialogHeader>
 
@@ -199,6 +211,10 @@ export function ApplicationsModal({ shiftId, onClose }: { shiftId: string; onClo
           open
           locum={selected.locum}
           application={selected.application}
+          documentsVisible={
+            selected.application.status === "Booked" && Boolean(selected.application.docsSharedAt)
+          }
+          documentsSharedAt={selected.application.docsSharedAt}
           onOpenChange={(open) => !open && setSelectedApplicationId(null)}
           onReject={
             selected.application.status === "Applied" || selected.application.status === "Requested"

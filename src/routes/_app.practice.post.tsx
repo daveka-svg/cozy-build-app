@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useStore, calcShiftValue, type Role } from "@/lib/store";
 import { useState, type ReactNode } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { TagMultiSelect, fmtGBP } from "@/components/Bits";
+import { fmtGBP, roleLabel } from "@/components/Bits";
 import { PageHeader } from "@/components/AppShell";
 import { ShiftCard } from "@/components/PlacementUI";
 import { toast } from "sonner";
@@ -24,6 +24,8 @@ interface DateRow {
   lunchMinutes: number;
   lunchPaid: boolean;
 }
+
+const roleOptions: Role[] = ["Vet", "Nurse", "Reception"];
 
 function PostShift() {
   const { practices, currentPracticeId, addShift } = useStore();
@@ -83,11 +85,26 @@ function PostShift() {
       <div className="grid lg:grid-cols-[1fr_22rem] gap-6 text-sm">
         <div className="space-y-5">
           <Section title="Role">
-            <TagMultiSelect
-              roles={["Vet", "Nurse", "Reception"]}
-              selectedRoles={[role]}
-              onToggle={(item) => setRole(item)}
-            />
+            <div className="grid grid-cols-3 gap-2">
+              {roleOptions.map((item) => {
+                const selected = role === item;
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setRole(item)}
+                    className={`flex h-11 items-center justify-center rounded-md border bg-white px-3 text-sm font-medium transition-colors ${
+                      selected
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+                    }`}
+                  >
+                    {roleLabel[item]}
+                  </button>
+                );
+              })}
+            </div>
           </Section>
 
           <Section title="Practice">
@@ -129,7 +146,7 @@ function PostShift() {
                     <div className="col-span-12 sm:col-span-3">
                       <Label className="text-xs font-medium text-muted-foreground">Date</Label>
                       <Input
-                        className="h-9 text-sm"
+                        className="h-9 bg-white text-sm"
                         type="date"
                         value={r.date}
                         onChange={(e) => updateRow(i, { date: e.target.value })}
@@ -138,7 +155,7 @@ function PostShift() {
                     <div className="col-span-6 sm:col-span-2">
                       <Label className="text-xs font-medium text-muted-foreground">Start</Label>
                       <Input
-                        className="h-9 text-sm"
+                        className="h-9 bg-white text-sm"
                         type="time"
                         value={r.start}
                         onChange={(e) => updateRow(i, { start: e.target.value })}
@@ -147,7 +164,7 @@ function PostShift() {
                     <div className="col-span-6 sm:col-span-2">
                       <Label className="text-xs font-medium text-muted-foreground">End</Label>
                       <Input
-                        className="h-9 text-sm"
+                        className="h-9 bg-white text-sm"
                         type="time"
                         value={r.end}
                         onChange={(e) => updateRow(i, { end: e.target.value })}
@@ -156,7 +173,7 @@ function PostShift() {
                     <div className="col-span-6 sm:col-span-2">
                       <Label className="text-xs font-medium text-muted-foreground">Lunch</Label>
                       <Input
-                        className="h-9 text-sm"
+                        className="h-9 bg-white text-sm"
                         type="number"
                         value={r.lunchMinutes}
                         onChange={(e) => updateRow(i, { lunchMinutes: Number(e.target.value) })}
@@ -165,7 +182,7 @@ function PostShift() {
                     <div className="col-span-6 flex items-end sm:col-span-2">
                       <label
                         htmlFor={`lp-${i}`}
-                        className="flex h-10 w-full items-center gap-2 rounded-md border bg-white px-3 text-sm font-medium"
+                        className="flex h-9 w-full items-center gap-2 rounded-md border bg-white px-3 text-sm font-semibold text-foreground"
                       >
                         <Checkbox
                           id={`lp-${i}`}
@@ -207,7 +224,7 @@ function PostShift() {
               <div>
                 <Label className="text-xs font-medium text-muted-foreground">Rate</Label>
                 <Input
-                  className="h-9 text-sm"
+                  className="h-9 bg-white text-sm"
                   type="number"
                   value={rate}
                   onChange={(e) => setRate(Number(e.target.value))}
@@ -252,13 +269,12 @@ function PostShift() {
               key={i}
               date={r.date}
               role={role}
-              status="Open"
               title={`${r.start}-${r.end}`}
               meta={
                 <div className="space-y-1">
                   <div>{selectedLocation.name}</div>
                   <div>
-                    Lunch {r.lunchMinutes}m{r.lunchPaid ? " paid" : ""}
+                    Lunch {r.lunchMinutes}m {r.lunchPaid ? "paid" : "unpaid"}
                   </div>
                 </div>
               }

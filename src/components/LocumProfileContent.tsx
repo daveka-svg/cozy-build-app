@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ChangeEvent, type ReactNode } from "react";
 import {
   Award,
   BadgeCheck,
@@ -15,8 +15,6 @@ import {
   MessageCircle,
   Plus,
   Save,
-  ShieldCheck,
-  Star,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -94,8 +92,6 @@ export function LocumProfileContent({
     <div className={mode === "modal" ? "space-y-4" : "space-y-5"}>
       <ProfileHero locum={locum} mode={mode} showContact={showContact} />
 
-      <ReadinessStrip locum={locum} attachmentCount={locumAttachments.length} />
-
       {editable && (
         <EditableProfilePanel
           locum={locum}
@@ -132,6 +128,19 @@ export function LocumProfileContent({
 
       <div className={mode === "modal" ? "grid gap-4" : "grid gap-4 lg:grid-cols-[0.95fr_1.05fr]"}>
         <ProfileSection title="Documents" icon={FileCheck2}>
+          {locum.cvText || locum.cvFileName ? (
+            <div className="mb-3 rounded-md border bg-muted/30 p-3 text-sm">
+              <div className="font-medium">CV</div>
+              {locum.cvText && (
+                <p className="mt-1 line-clamp-4 whitespace-pre-wrap text-muted-foreground">
+                  {locum.cvText}
+                </p>
+              )}
+              {locum.cvFileName && (
+                <div className="mt-2 text-xs text-muted-foreground">{locum.cvFileName}</div>
+              )}
+            </div>
+          ) : null}
           <DocumentList documents={locum.documents} />
           {locumAttachments.length > 0 && (
             <div className="mt-3 space-y-2">
@@ -238,10 +247,6 @@ function ProfileHero({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <RoleChip role={locum.role} />
-              <span className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium">
-                <Star className="size-3 text-primary" />
-                {locum.rating.toFixed(1)}
-              </span>
               {locum.publicProfile?.enabled ? (
                 <StatusChip status="Public profile live" />
               ) : (
@@ -326,6 +331,19 @@ function EditableProfilePanel({
   const [availabilityNote, setAvailabilityNote] = useState(locum.availabilityNote ?? "");
   const [publicSlug, setPublicSlug] = useState(locum.publicProfile?.slug ?? locum.id);
   const [publicHeadline, setPublicHeadline] = useState(locum.publicProfile?.headline ?? "");
+  const [cvText, setCvText] = useState(locum.cvText ?? "");
+  const [cvFileName, setCvFileName] = useState(locum.cvFileName ?? "");
+
+  const uploadCvText = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCvText(String(reader.result ?? ""));
+      setCvFileName(file.name);
+    };
+    reader.readAsText(file);
+  };
 
   return (
     <section className="rounded-lg border bg-card p-5">
@@ -348,6 +366,9 @@ function EditableProfilePanel({
               postcodeArea: postcodeArea.trim() || locum.postcodeArea,
               hourlyRate: Number(hourlyRate) || locum.hourlyRate,
               availabilityNote: availabilityNote.trim() || undefined,
+              cvText: cvText.trim() || undefined,
+              cvFileName: cvFileName.trim() || undefined,
+              cvAttached: Boolean(cvText.trim() || cvFileName.trim()),
             })
           }
         >
@@ -381,6 +402,23 @@ function EditableProfilePanel({
           <Textarea value={bio} onChange={(event) => setBio(event.target.value)} rows={4} />
         </div>
         <div className="sm:col-span-2">
+          <Label>CV text file</Label>
+          <Input type="file" accept=".txt,text/plain" onChange={uploadCvText} />
+          {cvFileName && <div className="mt-1 text-xs text-muted-foreground">{cvFileName}</div>}
+        </div>
+        <div className="sm:col-span-2">
+          <Label>CV text</Label>
+          <Textarea
+            value={cvText}
+            onChange={(event) => {
+              setCvText(event.target.value);
+              if (!cvFileName && event.target.value.trim()) setCvFileName("cv-text.txt");
+            }}
+            rows={5}
+            placeholder="Paste CV text here..."
+          />
+        </div>
+        <div className="sm:col-span-2">
           <Label>Availability note</Label>
           <Textarea
             value={availabilityNote}
@@ -407,7 +445,6 @@ function EditableProfilePanel({
                 slug: publicSlug.trim() || locum.id,
                 headline: publicHeadline.trim() || undefined,
                 showRate: locum.publicProfile?.showRate ?? true,
-                showDocuments: locum.publicProfile?.showDocuments ?? true,
                 showAvailability: locum.publicProfile?.showAvailability ?? true,
               })
             }
@@ -455,7 +492,7 @@ function DocumentEditor({
     setKind("Other");
     setStatus("supplied");
     setVisibility("practice");
-    toast.success("Document added to profile checklist");
+    toast.success("Document added");
   };
 
   return (
@@ -482,7 +519,7 @@ function DocumentEditor({
             label="Status"
             value={status}
             onChange={(value) => setStatus(value as EditableDocumentStatus)}
-            options={["supplied", "missing", "expiring", "verified"]}
+            options={["supplied", "missing", "expiring"]}
           />
           <SelectField
             label="Visible to"
@@ -592,44 +629,6 @@ function GoogleCalendarPanel({
         <span className="text-xs text-muted-foreground">{lastSynced}</span>
       </div>
     </section>
-  );
-}
-
-function ReadinessStrip({ locum, attachmentCount }: { locum: Locum; attachmentCount: number }) {
-  const requiredDocs = locum.documents.filter((document) => document.required);
-  const verifiedRequired = requiredDocs.filter(
-    (document) => document.status === "verified" || document.status === "supplied",
-  );
-  const rcvsReady = locum.role === "Reception" || Boolean(locum.rcvs);
-  const checks = [
-    { label: "CV", ready: locum.cvAttached },
-    { label: "RCVS", ready: rcvsReady },
-    {
-      label: "Required docs",
-      ready: requiredDocs.length === 0 || verifiedRequired.length === requiredDocs.length,
-    },
-    { label: "Files", ready: attachmentCount > 0 },
-  ];
-
-  return (
-    <div className="grid gap-2 sm:grid-cols-4">
-      {checks.map((check) => (
-        <div
-          key={check.label}
-          className="flex items-center gap-2 rounded-lg border bg-card p-3 text-sm"
-        >
-          <div className={check.ready ? "text-primary" : "text-muted-foreground"}>
-            {check.ready ? <ShieldCheck className="size-4" /> : <FileText className="size-4" />}
-          </div>
-          <div>
-            <div className="font-medium">{check.label}</div>
-            <div className="text-xs text-muted-foreground">
-              {check.ready ? "Ready" : "Needs attention"}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
   );
 }
 

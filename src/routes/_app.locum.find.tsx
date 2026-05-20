@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Globe, ListFilter, MapPin, Navigation, Send, Users } from "lucide-react";
 import { PageHeader } from "@/components/AppShell";
-import { EmptyState, StatusChip, TagMultiSelect, fmtDate, fmtGBP } from "@/components/Bits";
+import { EmptyState, TagMultiSelect, fmtDate, fmtGBP } from "@/components/Bits";
 import { ShiftCard } from "@/components/PlacementUI";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -166,16 +166,14 @@ function FindShifts() {
             (application) =>
               application.shiftId === shift.id && application.locumId === currentLocumId,
           );
-          const cvOk = me.cvAttached;
-          const rcvsOk = shift.role === "Reception" || Boolean(me.rcvs);
-          const canApply = cvOk && rcvsOk && !myApp;
+          const canApply = me.cvAttached && !myApp;
 
           return (
             <ShiftCard
               key={shift.id}
               date={shift.date}
               role={shift.role}
-              status={myApp ? myApp.status : shift.status}
+              status={myApp ? myApp.status : undefined}
               title={practice.tradingName}
               meta={
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">

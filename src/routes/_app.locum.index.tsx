@@ -1,22 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ElementType } from "react";
-import {
-  ArrowRight,
-  BadgeCheck,
-  Calendar,
-  CalendarClock,
-  Clock,
-  FileText,
-  Search,
-  ShieldCheck,
-  Star,
-  Wallet,
-} from "lucide-react";
+import { ArrowRight, Calendar, CalendarClock, Clock, FileText, Search, Wallet } from "lucide-react";
 
 import { PageHeader } from "@/components/AppShell";
 import { DateBlock, RoleChip, StatusChip } from "@/components/Bits";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { calcShiftHours, useStore } from "@/lib/store";
 
 const money = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" });
@@ -37,7 +25,6 @@ function LocumDashboard() {
     invoices,
     bookingRequests,
     locumAvailability,
-    attachments,
   } = useStore();
   const me = locums.find((locum) => locum.id === currentLocumId);
 
@@ -122,98 +109,44 @@ function LocumDashboard() {
     return sum + hours * shift.hourlyRate;
   }, 0);
 
-  const requiredDocs = me.documents.filter((document) => document.required);
-  const readyRequiredDocs = requiredDocs.filter(
-    (document) => document.status === "verified" || document.status === "supplied",
-  );
-  const readinessItems = [
-    { label: "CV", ready: me.cvAttached },
-    { label: "RCVS", ready: me.role === "Reception" || Boolean(me.rcvs) },
-    {
-      label: "Required docs",
-      ready: requiredDocs.length === 0 || readyRequiredDocs.length === requiredDocs.length,
-    },
-    { label: "Profile photo", ready: Boolean(me.photoUrl) },
-    {
-      label: "Files",
-      ready: attachments.some(
-        (attachment) => attachment.ownerType === "locum" && attachment.ownerId === me.id,
-      ),
-    },
-    { label: "Availability", ready: publicAvailability > 0 },
-  ];
-  const readinessScore = Math.round(
-    (readinessItems.filter((item) => item.ready).length / readinessItems.length) * 100,
-  );
   return (
     <div className="mx-auto max-w-6xl p-6">
       <PageHeader title={`Hi, ${me.displayName}`} />
 
       <section className="mb-5 overflow-hidden rounded-lg border bg-card">
-        <div className="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="p-5">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div className="size-16 overflow-hidden rounded-lg border bg-primary/10">
-                {me.photoUrl ? (
-                  <img src={me.photoUrl} alt={me.displayName} className="size-full object-cover" />
-                ) : (
-                  <div className="grid size-full place-items-center font-semibold text-primary">
-                    {initials(me.displayName)}
-                  </div>
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <RoleChip role={me.role} />
-                  <span className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium">
-                    <Star className="size-3 text-primary" />
-                    {me.rating.toFixed(1)}
-                  </span>
+        <div className="p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="size-16 overflow-hidden rounded-lg border bg-primary/10">
+              {me.photoUrl ? (
+                <img src={me.photoUrl} alt={me.displayName} className="size-full object-cover" />
+              ) : (
+                <div className="grid size-full place-items-center font-semibold text-primary">
+                  {initials(me.displayName)}
                 </div>
-                <h2 className="mt-2 text-xl font-semibold">
-                  {me.publicHeadline ?? `${me.role} locum around ${me.postcodeArea}`}
-                </h2>
-              </div>
+              )}
             </div>
-            <div className="mt-4 flex flex-wrap gap-2 border-t pt-4">
-              <Button size="sm" asChild>
-                <Link to="/locum/find">
-                  <Search className="size-4" />
-                  Find
-                </Link>
-              </Button>
-              <Button size="sm" variant="outline" asChild>
-                <Link to="/locum/bookings">
-                  <Calendar className="size-4" />
-                  Work
-                </Link>
-              </Button>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <RoleChip role={me.role} />
+              </div>
+              <h2 className="mt-2 text-xl font-semibold">
+                {me.publicHeadline ?? `${me.role} locum around ${me.postcodeArea}`}
+              </h2>
             </div>
           </div>
-
-          <div className="border-t bg-muted/20 p-5 lg:border-l lg:border-t-0">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="font-semibold">Profile readiness</div>
-                <div className="text-sm text-muted-foreground">
-                  {readinessScore}% ready for practice review
-                </div>
-              </div>
-              <ShieldCheck className="size-5 text-primary" />
-            </div>
-            <Progress value={readinessScore} className="mt-3" />
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              {readinessItems.map((item) => (
-                <div key={item.label} className="flex items-center gap-2 text-xs">
-                  {item.ready ? (
-                    <BadgeCheck className="size-3.5 text-primary" />
-                  ) : (
-                    <FileText className="size-3.5 text-muted-foreground" />
-                  )}
-                  <span className={item.ready ? "" : "text-muted-foreground"}>{item.label}</span>
-                </div>
-              ))}
-            </div>
+          <div className="mt-4 flex flex-wrap gap-2 border-t pt-4">
+            <Button size="sm" asChild>
+              <Link to="/locum/find">
+                <Search className="size-4" />
+                Find
+              </Link>
+            </Button>
+            <Button size="sm" variant="outline" asChild>
+              <Link to="/locum/bookings">
+                <Calendar className="size-4" />
+                Work
+              </Link>
+            </Button>
           </div>
         </div>
       </section>

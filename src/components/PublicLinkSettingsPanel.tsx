@@ -21,9 +21,6 @@ function fallbackSettings(practice: Practice): PublicLinkSettings {
     visibleRoles: roles,
     showRates: true,
     showPracticeWebsite: true,
-    requirePhone: true,
-    requireCvLink: false,
-    customFields: [],
   };
 }
 

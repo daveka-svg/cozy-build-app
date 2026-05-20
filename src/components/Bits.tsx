@@ -86,14 +86,15 @@ const statusTone: Record<string, keyof typeof toneStyle> = {
   completed: "done",
   Approved: "done",
   approved: "done",
-  verified: "done",
   "Paid outside platform": "done",
   paid: "done",
+  "Docs shared": "done",
   Draft: "neutral",
   draft: "neutral",
   Withdrawn: "neutral",
   withdrawn: "neutral",
   "Private profile": "neutral",
+  "Docs private": "neutral",
   "Not connected": "neutral",
   Cancelled: "danger",
   cancelled: "danger",
@@ -129,6 +130,8 @@ const statusLabel: Record<string, string> = {
   "Paid outside platform": "Paid",
   "Public profile live": "Live",
   "Private profile": "Private",
+  "Docs shared": "Docs shared",
+  "Docs private": "Docs private",
 };
 
 export function statusIntent(status: string): keyof typeof toneStyle {
