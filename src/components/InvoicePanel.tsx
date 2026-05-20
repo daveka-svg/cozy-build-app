@@ -1,4 +1,4 @@
-import { FileText, ReceiptText, Send, Share2 } from "lucide-react";
+import { FileText, ReceiptText, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fmtGBP } from "@/components/Bits";
 import type { Invoice, Shift, Timesheet } from "@/lib/store";
@@ -83,24 +83,10 @@ export function InvoicePanel({
   return (
     <section className="rounded-lg border bg-card p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2 font-medium">
-              <ReceiptText className="size-4 text-primary" />
-              Invoice
-            </div>
-            {showActions && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-7 px-2 text-xs"
-                onClick={() => void shareInvoice()}
-              >
-                <Share2 className="size-3.5" />
-                Share
-              </Button>
-            )}
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 font-medium">
+            <ReceiptText className="size-4 text-primary" />
+            Invoice
           </div>
           {(practiceName || locumName) && (
             <div className="mt-2 text-xs text-muted-foreground">
@@ -109,19 +95,34 @@ export function InvoicePanel({
           )}
         </div>
 
-        <div className="grid grid-cols-3 gap-2 text-right text-sm sm:min-w-72">
-          <div className="rounded-md bg-muted/50 p-2">
-            <div className="text-xs text-muted-foreground">Hours</div>
-            <div className="font-semibold">{hours.toFixed(2)}</div>
+        <div className="flex items-start gap-2 sm:ml-auto">
+          <div className="grid grid-cols-3 gap-2 text-right text-sm sm:min-w-72">
+            <div className="rounded-md bg-muted/50 p-2">
+              <div className="text-xs text-muted-foreground">Hours</div>
+              <div className="font-semibold">{hours.toFixed(2)}</div>
+            </div>
+            <div className="rounded-md bg-muted/50 p-2">
+              <div className="text-xs text-muted-foreground">Rate</div>
+              <div className="font-semibold">{fmtGBP(shift.hourlyRate)}/hr</div>
+            </div>
+            <div className="rounded-md bg-muted/50 p-2">
+              <div className="text-xs text-muted-foreground">Total</div>
+              <div className="font-semibold">{fmtGBP(total)}</div>
+            </div>
           </div>
-          <div className="rounded-md bg-muted/50 p-2">
-            <div className="text-xs text-muted-foreground">Rate</div>
-            <div className="font-semibold">{fmtGBP(shift.hourlyRate)}/hr</div>
-          </div>
-          <div className="rounded-md bg-muted/50 p-2">
-            <div className="text-xs text-muted-foreground">Total</div>
-            <div className="font-semibold">{fmtGBP(total)}</div>
-          </div>
+          {showActions && (
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              className="size-8 shrink-0"
+              aria-label="Share invoice"
+              title="Share invoice"
+              onClick={() => void shareInvoice()}
+            >
+              <FileText className="size-4" />
+            </Button>
+          )}
         </div>
       </div>
 

@@ -464,6 +464,7 @@ function WorkItemCard({
   const { a, s, p, loc, ts, inv } = item;
   const shareApplicationDocuments = useStore((state) => state.shareApplicationDocuments);
   const isPast = s.date < new Date().toISOString().slice(0, 10);
+  const primaryStatus = s.status === "Completed" || s.status === "Cancelled" ? s.status : a.status;
   const cancellation = cancellations.find(
     (entry) => entry.ownerType === "application" && entry.ownerId === a.id,
   );
@@ -475,8 +476,7 @@ function WorkItemCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <RoleChip role={s.role} />
-            <StatusChip status={a.status} />
-            <StatusChip status={s.status} />
+            <StatusChip status={primaryStatus} />
           </div>
           <div className="mt-1 text-sm font-medium">{p.tradingName}</div>
           <div className="text-xs text-muted-foreground">
@@ -781,10 +781,7 @@ function TimesheetDialog({
           </div>
           <div className="col-span-2">
             <Label>Work notes</Label>
-            <Textarea
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-            />
+            <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} />
           </div>
         </div>
         <DialogFooter>

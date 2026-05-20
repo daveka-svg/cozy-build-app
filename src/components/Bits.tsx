@@ -110,7 +110,7 @@ const statusLabel: Record<string, string> = {
   Open: "Shift",
   open: "Shift",
   "New applicants": "Request",
-  Applied: "Request",
+  Applied: "Applied",
   Requested: "Request",
   applied: "Applied",
   requested: "Request",
